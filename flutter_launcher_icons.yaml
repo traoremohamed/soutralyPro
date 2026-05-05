@@ -1,0 +1,12 @@
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/image/logo.png"
+
+  # Android adaptive icon (API 26+) : fond blanc, logo orange
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/image/logo.png"
+
+  # iOS background blanc
+  remove_alpha_ios: true
+  background_color_ios: "#FFFFFF"

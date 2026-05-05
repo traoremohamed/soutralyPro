@@ -1,0 +1,17 @@
+class PaymentGateways {
+  String? gateway;
+  String? gatewayTitle;
+  String? gatewayImage;
+
+  PaymentGateways({this.gateway, this.gatewayTitle, this.gatewayImage});
+
+  PaymentGateways.fromJson(Map<String, dynamic> json) {
+    gateway = json['gateway'];
+    gatewayTitle = json['gatewayTitle'] ??
+        json['gateway_title'] ??
+        json['gateway_title'.toLowerCase()];
+    gatewayImage = json['gatewayImage'] ??
+        json['gateway_image'] ??
+        json['gateway_image'.toLowerCase()];
+  }
+}

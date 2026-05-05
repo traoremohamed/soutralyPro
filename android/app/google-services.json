@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "915395800328",
+    "project_id": "soutraly-vtc",
+    "storage_bucket": "soutraly-vtc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:915395800328:android:dfd0a04552c6168fdc10bd",
+        "android_client_info": {
+          "package_name": "com.soutralyvtc.appchaufeur"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzHM8kymRO1cMM_3wW6Jm3FsHVSjVSXgc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:915395800328:android:f93332248204ad4edc10bd",
+        "android_client_info": {
+          "package_name": "com.soutralyvtc.appclient"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzHM8kymRO1cMM_3wW6Jm3FsHVSjVSXgc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
