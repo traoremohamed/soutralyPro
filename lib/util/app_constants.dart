@@ -3,7 +3,7 @@ import 'package:ride_sharing_user_app/util/images.dart';
 
 class AppConstants {
   static const String appName = 'SoutralyPRO';
-  static const String baseUrl = 'https://www.soutralyvtc.com';
+  static const String baseUrl = 'https://soutralyvtc.com';
   static const String polylineMapKey =
       'AIzaSyCAxCeTJVBc7fm8FC7iEZiqNF49qN9PmEM';
   static const double appVersion = 2.8;
