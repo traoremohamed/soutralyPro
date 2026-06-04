@@ -1,17 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:ride_sharing_user_app/features/auth/domain/enums/verification_from_enum.dart';
-import 'package:ride_sharing_user_app/helper/display_helper.dart';
-import 'package:ride_sharing_user_app/helper/svg_image_helper.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
 import 'package:ride_sharing_user_app/features/auth/controllers/auth_controller.dart';
 import 'package:ride_sharing_user_app/features/auth/screens/sign_up_screen.dart';
+import 'package:ride_sharing_user_app/helper/otp_push_helper.dart';
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/common_widgets/app_bar_widget.dart';
 import 'package:ride_sharing_user_app/common_widgets/button_widget.dart';
@@ -41,12 +39,29 @@ class _VerificationScreenState extends State<VerificationScreen> {
   final StreamController<ErrorAnimationType> _errorController =
       StreamController<ErrorAnimationType>();
   String errorText = '';
+  StreamSubscription<String>? _otpSubscription;
 
   @override
   void initState() {
     super.initState();
     Get.find<AuthController>().clearVerificationCode(isUpdate: false);
     _startTimer();
+    _otpSubscription = OtpPushHelper.otpStream.listen(_applyOtpCode);
+    OtpPushHelper.getPendingOtp().then((otpCode) {
+      if (otpCode != null && otpCode.isNotEmpty) {
+        _applyOtpCode(otpCode);
+      }
+    });
+  }
+
+  void _applyOtpCode(String otpCode) {
+    if (!mounted || otpCode.length != 6) {
+      return;
+    }
+
+    pinController.text = otpCode;
+    Get.find<AuthController>().updateVerificationCode(otpCode);
+    OtpPushHelper.clearPendingOtp();
   }
 
   void _startTimer() {
@@ -64,6 +79,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   @override
   void dispose() {
     super.dispose();
+    _otpSubscription?.cancel();
     _errorController.close();
     _timer?.cancel();
   }
@@ -142,6 +158,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                     SizedBox(
                       width: Get.width - 60,
                       child: PinCodeTextField(
+                        controller: pinController,
                         length: 6,
                         cursorColor:
                             Theme.of(context).textTheme.bodyMedium?.color,
@@ -258,37 +275,15 @@ class _VerificationScreenState extends State<VerificationScreen> {
                         _seconds! <= 0
                             ? TextButton(
                                 onPressed: () async {
-                                  if (Get.find<SplashController>()
-                                          .config
-                                          ?.isFirebaseOtpVerification ??
-                                      false) {
-                                    await authController.firebaseOtpSend(
-                                        countryCode: widget.countryCode,
-                                        number: widget.number,
-                                        canRoute: false,
-                                        from: widget.form);
-                                    showCustomSnackBar(
-                                        'otp_sent_successfully'.tr,
-                                        isError: false);
-
-                                    _startTimer();
-                                  } else if (Get.find<SplashController>()
-                                          .config
-                                          ?.isSmsGateway ??
-                                      false) {
-                                    authController
-                                        .sendOtp(
-                                            countryCode: widget.countryCode,
-                                            number: widget.number)
-                                        .then((value) {
-                                      if (value.statusCode == 200) {
-                                        _startTimer();
-                                      }
-                                    });
-                                  } else {
-                                    showCustomSnackBar(
-                                        'sms_gateway_not_integrate'.tr);
-                                  }
+                                  authController
+                                      .sendOtp(
+                                          countryCode: widget.countryCode,
+                                          number: widget.number)
+                                      .then((value) {
+                                    if (value.statusCode == 200) {
+                                      _startTimer();
+                                    }
+                                  });
                                 },
                                 child: Text('resend_code'.tr,
                                     style: textBold.copyWith(

@@ -55,6 +55,7 @@ class AppConstants {
       '/api/driver/notification-list?limit=10&offset=';
   static const String arrivalPickupPoint = '/api/driver/ride/arrival-time';
   static const String waitingUri = '/api/driver/ride/ride-waiting';
+  static const String liveFeesUri = '/api/driver/ride/live-fees';
   static const String transactionListUri =
       '/api/driver/transaction/list?limit=10&offset=';
   static const String loyaltyPointListUri =
@@ -99,7 +100,7 @@ class AppConstants {
   static const String withdrawSettledListUri =
       '/api/driver/withdraw/settled-request?limit=10&offset=';
   static const String cashCollectHistoryList =
-      '/api/driver/transaction/cash-collect-list?limit=10&offset=';
+      '/api/driver/transaction/forfait-subscriptions?limit=10&offset=';
   static const String walletListUri =
       '/api/driver/transaction/wallet-list?limit=10&offset=';
   static const String withdrawMethodDelete =
@@ -108,7 +109,12 @@ class AppConstants {
   static const String driverPricingOptions = '/api/driver/pricing/options';
   static const String driverPricingSelectMode =
       '/api/driver/pricing/select-mode';
+  static const String driverBrandingOptions = '/api/driver/branding/options';
+  static const String driverBrandingSubscribe =
+      '/api/driver/branding/subscribe';
   static const String mockWaveRechargeUri = '/api/v1/mock-wave/recharge';
+  static const String waveCheckoutSessionUri = '/api/v1/wave/checkout/session';
+  static const String paymentsInitiateUri = '/api/v1/payments/initiate';
   static const String referralDetails = '/api/driver/referral-details';
   static const String referralEarningList =
       '/api/driver/transaction/referral-earning-list?limit=10&offset=';

@@ -17,8 +17,6 @@ import 'package:ride_sharing_user_app/util/images.dart';
 import 'stay_online_widget.dart';
 import 'ride_ongoing_widget.dart';
 
-
-
 class RiderBottomSheetWidget extends StatelessWidget {
   final GlobalKey<ExpandableBottomSheetState> expandableKey;
   const RiderBottomSheetWidget({super.key, required this.expandableKey});
@@ -29,74 +27,88 @@ class RiderBottomSheetWidget extends StatelessWidget {
       return GetBuilder<RideController>(builder: (rideController) {
         return GetBuilder<ProfileController>(builder: (profileController) {
           return Container(
-            decoration: BoxDecoration(color: Theme.of(context).cardColor,
-              borderRadius : const BorderRadius.only(
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(Dimensions.paddingSizeDefault),
-                topRight : Radius.circular(Dimensions.paddingSizeDefault),
+                topRight: Radius.circular(Dimensions.paddingSizeDefault),
               ),
-              boxShadow: [BoxShadow(
-                  color: Theme.of(context).hintColor,
-                  blurRadius: 5, spreadRadius: 1, offset: const Offset(0,2)
-              )],
+              boxShadow: [
+                BoxShadow(
+                    color: Theme.of(context).hintColor,
+                    blurRadius: 5,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 2))
+              ],
             ),
             width: MediaQuery.of(context).size.width,
             child: Padding(
-                padding:  const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeDefault),
-                child : Column(mainAxisSize: MainAxisSize.min, children: [
-                  Container(height: 5, width: 30, decoration: BoxDecoration(
-                    color: Theme.of(context).hintColor.withValues(alpha: .25),
-                    borderRadius: BorderRadius.circular(Dimensions.paddingSizeExtraSmall),
-                  )),
-
-                  if(mapController.currentRideState == RideState.initial)
+                padding: const EdgeInsets.symmetric(
+                    vertical: Dimensions.paddingSizeDefault),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Container(
+                      height: 5,
+                      width: 30,
+                      decoration: BoxDecoration(
+                        color:
+                            Theme.of(context).hintColor.withValues(alpha: .25),
+                        borderRadius: BorderRadius.circular(
+                            Dimensions.paddingSizeExtraSmall),
+                      )),
+                  if (mapController.currentRideState == RideState.initial)
                     const StayOnlineWidget(),
-
-                  if(mapController.currentRideState == RideState.pending)
-                    CustomerRideRequestCardWidget(rideRequest: rideController.tripDetail!),
-
-                  if(mapController.currentRideState == RideState.accepted)
+                  if (mapController.currentRideState == RideState.pending &&
+                      rideController.tripDetail != null)
+                    CustomerRideRequestCardWidget(
+                        rideRequest: rideController.tripDetail!),
+                  if (mapController.currentRideState == RideState.accepted)
                     AcceptedRiderWidget(expandableKey: expandableKey),
-
-                  if(mapController.currentRideState == RideState.outForPickup)
+                  if (mapController.currentRideState == RideState.outForPickup)
                     OutForPickupWidget(expandableKey: expandableKey),
-
-                  if(mapController.currentRideState == RideState.ongoing)
-                    RideOngoingWidget(tripId: rideController.tripDetail?.id ?? '',expandableKey: expandableKey),
-
-                  if(mapController.currentRideState == RideState.completed)
+                  if (mapController.currentRideState == RideState.ongoing)
+                    RideOngoingWidget(
+                        tripId: rideController.tripDetail?.id ?? '',
+                        expandableKey: expandableKey),
+                  if (mapController.currentRideState == RideState.completed)
                     const CalculatingSubTotalWidget(),
-
-                  if(mapController.currentRideState == RideState.initial)
+                  if (mapController.currentRideState == RideState.initial)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
-                        Dimensions.paddingSizeDefault,Dimensions.paddingSizeSmall,
-                        Dimensions.paddingSizeDefault,Dimensions.paddingSizeDefault,
+                        Dimensions.paddingSizeDefault,
+                        Dimensions.paddingSizeSmall,
+                        Dimensions.paddingSizeDefault,
+                        Dimensions.paddingSizeDefault,
                       ),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children:  [
-                        rideController.isLoading ?
-                        const LoaderWidget() :
-                        CustomIconCardWidget(title: 'refresh'.tr,icon: Images.mIcon3,
-                          onTap: () {
-                            rideController.getPendingRideRequestList(1,isUpdate: true);
-                          },
-                        ),
-
-                        CustomIconCardWidget(
-                          title: 'leader_board'.tr,
-                          icon: Images.mIcon2,
-                          onTap: () => Get.to(()=> const LeaderboardScreen()),
-                        ),
-
-                        CustomIconCardWidget(
-                          title: 'trip_request'.tr,
-                          icon: Images.mIcon1,
-                          onTap: () => Get.to(()=> const RideRequestScreen()),
-                        ),
-                      ]),
+                      child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            rideController.isLoading
+                                ? const LoaderWidget()
+                                : CustomIconCardWidget(
+                                    title: 'refresh'.tr,
+                                    icon: Images.mIcon3,
+                                    onTap: () {
+                                      rideController.getPendingRideRequestList(
+                                          1,
+                                          isUpdate: true);
+                                    },
+                                  ),
+                            CustomIconCardWidget(
+                              title: 'leader_board'.tr,
+                              icon: Images.mIcon2,
+                              onTap: () =>
+                                  Get.to(() => const LeaderboardScreen()),
+                            ),
+                            CustomIconCardWidget(
+                              title: 'trip_request'.tr,
+                              icon: Images.mIcon1,
+                              onTap: () =>
+                                  Get.to(() => const RideRequestScreen()),
+                            ),
+                          ]),
                     ),
                   const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-                ])
-            ),
+                ])),
           );
         });
       });

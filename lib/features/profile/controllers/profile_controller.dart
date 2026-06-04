@@ -14,6 +14,7 @@ import 'package:ride_sharing_user_app/features/map/controllers/map_controller.da
 import 'package:ride_sharing_user_app/features/profile/domain/models/level_model.dart';
 import 'package:ride_sharing_user_app/features/profile/domain/services/profile_service_interface.dart';
 import 'package:ride_sharing_user_app/features/wallet/widgets/payment_method_bottomsheet_widget.dart';
+import 'package:ride_sharing_user_app/features/wallet/widgets/recharge_bottom_sheet_widget.dart';
 import 'package:ride_sharing_user_app/features/wallet/screens/digital_payment_screen.dart';
 import 'package:ride_sharing_user_app/features/wallet/screens/wave_recharge_page.dart';
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
@@ -21,7 +22,6 @@ import 'package:ride_sharing_user_app/helper/display_helper.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/features/auth/controllers/auth_controller.dart';
 import 'package:ride_sharing_user_app/features/location/controllers/location_controller.dart';
-import 'package:ride_sharing_user_app/features/wallet/controllers/wallet_controller.dart';
 import 'package:ride_sharing_user_app/features/profile/domain/models/categoty_model.dart';
 import 'package:ride_sharing_user_app/features/profile/domain/models/profile_model.dart';
 import 'package:ride_sharing_user_app/features/profile/domain/models/reward_model.dart';
@@ -58,6 +58,7 @@ class ProfileController extends GetxController implements GetxService {
   bool isFirstTimeShowBottomSheet = true;
   bool isCashInHandWarningShow = false;
   bool isCashInHandHoldAccount = false;
+  bool _hasShownZeroWalletPopup = false;
 
   void updateFirstTimeShowBottomSheet(bool status) {
     isFirstTimeShowBottomSheet = status;
@@ -109,6 +110,16 @@ class ProfileController extends GetxController implements GetxService {
   double forfaitEcoConfortAmount = 7500;
   double forfaitEcoConfortPremiumAmount = 10000;
 
+  bool brandingOptionsLoading = false;
+  bool brandingUpdating = false;
+  bool brandingEnabled = false;
+  double brandingMonthlyAmount = 5000;
+  double brandingTotalAmount = 0;
+  int brandingMonths = 3;
+  List<int> brandingAllowedMonths = [3, 6, 9, 12];
+  String? brandingStartedAt;
+  String? brandingExpiresAt;
+
   void setOfferTypeIndex(int index) {
     _offerSelectedIndex = index;
     update();
@@ -127,8 +138,10 @@ class ProfileController extends GetxController implements GetxService {
     if (response!.statusCode == 200) {
       profileInfo = ProfileModel.fromJson(response.body).data!;
       await getDriverPricingOptions(isUpdate: false);
+      await getDriverBrandingOptions(isUpdate: false);
       Get.find<AuthController>().addImageAndRemoveMultiParseData();
       checkCashInHandWarningShow();
+      checkZeroWalletPopup();
       driverId = profileInfo!.id!;
       driverImage = profileInfo!.profileImage ?? '';
       isOnline = profileInfo?.details?.isOnline ?? '0';
@@ -230,6 +243,112 @@ class ProfileController extends GetxController implements GetxService {
 
     pricingOptionsLoading = false;
     update();
+  }
+
+  Future<void> getDriverBrandingOptions({bool isUpdate = true}) async {
+    brandingOptionsLoading = true;
+    if (isUpdate) {
+      update();
+    }
+
+    Response? response =
+        await profileServiceInterface.getDriverBrandingOptions();
+    if (response?.statusCode == 200 && response?.body != null) {
+      final dynamic body = response!.body;
+      final dynamic rawData =
+          body is Map<String, dynamic> ? body['data'] : null;
+
+      Map<String, dynamic> data = <String, dynamic>{};
+      if (rawData is Map) {
+        data = Map<String, dynamic>.from(rawData);
+      } else if (body is Map<String, dynamic>) {
+        data = Map<String, dynamic>.from(body);
+      }
+
+      brandingEnabled = (data['current_enabled'] ?? false) == true;
+      brandingMonthlyAmount =
+          double.tryParse('${data['monthly_amount'] ?? 5000}') ?? 5000;
+      brandingTotalAmount =
+          double.tryParse('${data['current_total_amount'] ?? 0}') ?? 0;
+      brandingMonths = int.tryParse('${data['current_months'] ?? 3}') ?? 3;
+      brandingAllowedMonths = data['allowed_months'] is List
+          ? List<int>.from((data['allowed_months'] as List)
+              .map((e) => int.tryParse('$e') ?? 0)).where((e) => e > 0).toList()
+          : [3, 6, 9, 12];
+      brandingStartedAt = data['branding_started_at']?.toString();
+      brandingExpiresAt = data['branding_expires_at']?.toString();
+
+      if (!brandingAllowedMonths.contains(brandingMonths) &&
+          brandingAllowedMonths.isNotEmpty) {
+        brandingMonths = brandingAllowedMonths.first;
+      }
+    }
+
+    brandingOptionsLoading = false;
+    update();
+  }
+
+  void setBrandingEnabled(bool value) {
+    brandingEnabled = value;
+    update();
+  }
+
+  void setBrandingMonths(int value) {
+    brandingMonths = value;
+    brandingTotalAmount = brandingMonthlyAmount * brandingMonths;
+    update();
+  }
+
+  Future<bool> submitDriverBranding({bool? enabled, int? months}) async {
+    brandingUpdating = true;
+    update();
+
+    final bool effectiveEnabled = enabled ?? brandingEnabled;
+    final int effectiveMonths = months ?? brandingMonths;
+
+    final Map<String, dynamic> payload = {
+      'enabled': effectiveEnabled,
+      'months': effectiveEnabled ? effectiveMonths : null,
+    };
+
+    final Response? response =
+        await profileServiceInterface.subscribeDriverBranding(payload);
+    if (response?.statusCode == 200) {
+      final dynamic body = response!.body;
+      final dynamic rawData =
+          body is Map<String, dynamic> ? body['data'] : null;
+      final Map<String, dynamic> data = rawData is Map
+          ? Map<String, dynamic>.from(rawData)
+          : body is Map<String, dynamic>
+              ? Map<String, dynamic>.from(body)
+              : <String, dynamic>{};
+
+      brandingEnabled = (data['enabled'] ?? effectiveEnabled) == true;
+      brandingMonthlyAmount = double.tryParse(
+              '${data['monthly_amount'] ?? brandingMonthlyAmount}') ??
+          brandingMonthlyAmount;
+      brandingMonths = int.tryParse('${data['months'] ?? effectiveMonths}') ??
+          effectiveMonths;
+      brandingTotalAmount =
+          double.tryParse('${data['total_amount'] ?? brandingTotalAmount}') ??
+              brandingTotalAmount;
+      brandingStartedAt = data['branding_started_at']?.toString();
+      brandingExpiresAt = data['branding_expires_at']?.toString();
+      showCustomSnackBar(
+          brandingEnabled
+              ? 'Branding activé avec succès'
+              : 'Branding désactivé',
+          isError: false);
+      await getProfileInfo();
+      brandingUpdating = false;
+      update();
+      return true;
+    }
+
+    brandingUpdating = false;
+    update();
+    ApiChecker.checkApi(response!);
+    return false;
   }
 
   Future<void> selectCommissionMode() async {
@@ -448,6 +567,9 @@ class ProfileController extends GetxController implements GetxService {
       } else if (isOnline == "1") {
         isOnline = "0";
       }
+
+      // Resynchronise les compteurs et l'etat reel du chauffeur depuis l'API.
+      await getProfileInfo();
     } else {
       Get.back();
       isLoading = false;
@@ -855,6 +977,46 @@ class ProfileController extends GetxController implements GetxService {
       isCashInHandHoldAccount = false;
       isCashInHandWarningShow = false;
     }
+  }
+
+  void checkZeroWalletPopup() {
+    final double walletBalance = profileInfo?.wallet?.walletBalance ?? 0;
+    if (walletBalance > 0) {
+      _hasShownZeroWalletPopup = false;
+      return;
+    }
+    if (_hasShownZeroWalletPopup) {
+      return;
+    }
+    if (Get.context == null) {
+      return;
+    }
+
+    _hasShownZeroWalletPopup = true;
+    Get.dialog(
+      AlertDialog(
+        title: Text('wallet_recharge_required_title'.tr),
+        content: Text('wallet_recharge_required_message'.tr),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('close'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Get.back();
+              Get.bottomSheet(
+                const RechargeBottomSheetWidget(),
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+              );
+            },
+            child: Text('recharge'.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 
   void removeCashInHandWarnings() {

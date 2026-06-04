@@ -1,20 +1,19 @@
-
 import 'package:image_picker/image_picker.dart';
 import 'package:ride_sharing_user_app/features/ride/domain/repositories/ride_repository_interface.dart';
 import 'package:ride_sharing_user_app/features/ride/domain/services/ride_service_interface.dart';
 
-class RideService implements RideServiceInterface{
+class RideService implements RideServiceInterface {
   final RideRepositoryInterface rideRepositoryInterface;
   RideService({required this.rideRepositoryInterface});
 
   @override
   Future arrivalDestination(String tripId, String destination) {
-   return rideRepositoryInterface.arrivalDestination(tripId, destination);
+    return rideRepositoryInterface.arrivalDestination(tripId, destination);
   }
 
   @override
   Future arrivalPickupPoint(String tripId) {
-   return rideRepositoryInterface.arrivalPickupPoint(tripId);
+    return rideRepositoryInterface.arrivalPickupPoint(tripId);
   }
 
   @override
@@ -33,8 +32,9 @@ class RideService implements RideServiceInterface{
   }
 
   @override
-  Future getPendingRideRequestList(int offset,{int limit = 10}) {
-    return rideRepositoryInterface.getPendingRideRequestList(offset, limit: limit);
+  Future getPendingRideRequestList(int offset, {int limit = 10}) {
+    return rideRepositoryInterface.getPendingRideRequestList(offset,
+        limit: limit);
   }
 
   @override
@@ -50,6 +50,11 @@ class RideService implements RideServiceInterface{
   @override
   Future getUnpaidParcelList(int offset) {
     return rideRepositoryInterface.getUnpaidParcelList(offset);
+  }
+
+  @override
+  Future getLiveFees(String tripId) {
+    return rideRepositoryInterface.getLiveFees(tripId);
   }
 
   @override
@@ -69,12 +74,12 @@ class RideService implements RideServiceInterface{
 
   @override
   Future ongoingTripList() {
-   return rideRepositoryInterface.ongoingTripList();
+    return rideRepositoryInterface.ongoingTripList();
   }
 
   @override
   Future lastRideDetail() {
-   return rideRepositoryInterface.lastRideDetail();
+    return rideRepositoryInterface.lastRideDetail();
   }
 
   @override
@@ -84,12 +89,14 @@ class RideService implements RideServiceInterface{
 
   @override
   Future tripAcceptOrReject(String tripId, String action) {
-   return rideRepositoryInterface.tripAcceptOrReject(tripId, action);
+    return rideRepositoryInterface.tripAcceptOrReject(tripId, action);
   }
 
   @override
-  Future tripStatusUpdate(String id, String status, String cancellationCause,String dateTime) async{
-    return await rideRepositoryInterface.tripStatusUpdate(id, status, cancellationCause,dateTime);
+  Future tripStatusUpdate(String id, String status, String cancellationCause,
+      String dateTime) async {
+    return await rideRepositoryInterface.tripStatusUpdate(
+        id, status, cancellationCause, dateTime);
   }
 
   @override
@@ -101,5 +108,4 @@ class RideService implements RideServiceInterface{
   Future waitingForCustomer(String tripId, String status) {
     return rideRepositoryInterface.waitingForCustomer(tripId, status);
   }
-
 }

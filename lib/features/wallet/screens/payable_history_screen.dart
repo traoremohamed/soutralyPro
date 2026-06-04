@@ -17,7 +17,7 @@ class _PayableHistoryScreenState extends State<PayableHistoryScreen> {
   ScrollController scrollController = ScrollController();
   @override
   void initState() {
-    Get.find<WalletController>().setPayableTypeIndex(0,notify: false);
+    Get.find<WalletController>().setPayableTypeIndex(0, notify: false);
     super.initState();
   }
 
@@ -27,46 +27,53 @@ class _PayableHistoryScreenState extends State<PayableHistoryScreen> {
       top: false,
       child: PopScope(
         onPopInvokedWithResult: (res, val) async {
-          Get.find<WalletController>().setPayableTypeIndex(1,notify: false);
+          Get.find<WalletController>().setPayableTypeIndex(1, notify: false);
           return;
         },
         child: Scaffold(
-          body: GetBuilder<WalletController>(builder: (walletController){
-           return Stack(children: [
-               Column(children: [
-                 AppBarWidget(title: 'my_wallet'.tr),
-                 const SizedBox(height: Dimensions.topBelowSpace),
-
-                 Expanded(
-                   child: SingleChildScrollView( controller: scrollController,
-                     child: PayableTransactionListWidget(
-                       walletController: walletController,
-                       scrollController: scrollController,
-                     ),
-                   ),
-                 )
-               ]),
-
-             Positioned(top: Dimensions.topSpace,left: Dimensions.paddingSizeSmall,
-               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                 SizedBox(height: Dimensions.headerCardHeight,
-                   child: ListView.builder(
-                     shrinkWrap: true,
-                     padding: EdgeInsets.zero,
-                     scrollDirection: Axis.horizontal,
-                     itemCount: walletController.payableTypeList.length,
-                     itemBuilder: (context, index){
-                       return SizedBox(width : Get.width/2.1,
-                         child: PayableTypeButtonWidget(
-                           payableType : walletController.payableTypeList[index], index: index,
-                         ),
-                       );
-                     },
-                   ),
-                 ),
-               ]),
-             )
-             ]);
+          body: GetBuilder<WalletController>(builder: (walletController) {
+            return Stack(children: [
+              Column(children: [
+                AppBarWidget(title: 'my_wallet'.tr),
+                const SizedBox(height: Dimensions.topBelowSpace),
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: PayableTransactionListWidget(
+                      walletController: walletController,
+                      scrollController: scrollController,
+                      tabIndex: 0,
+                    ),
+                  ),
+                )
+              ]),
+              Positioned(
+                top: Dimensions.topSpace,
+                left: Dimensions.paddingSizeSmall,
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  SizedBox(
+                    height: Dimensions.headerCardHeight,
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: walletController.payableTypeList.length,
+                      itemBuilder: (context, index) {
+                        return SizedBox(
+                          width: Get.width / 2.1,
+                          child: PayableTypeButtonWidget(
+                            payableType:
+                                walletController.payableTypeList[index],
+                            index: index,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ]),
+              )
+            ]);
           }),
         ),
       ),

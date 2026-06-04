@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/common_widgets/button_widget.dart';
 import 'package:ride_sharing_user_app/common_widgets/image_widget.dart';
 import 'package:ride_sharing_user_app/features/wallet/controllers/wallet_controller.dart';
-import 'package:ride_sharing_user_app/features/wallet/screens/digital_payment_screen.dart';
 import 'package:ride_sharing_user_app/helper/price_converter.dart';
 import 'package:ride_sharing_user_app/util/app_constants.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
@@ -14,6 +13,9 @@ class PaymentMethodBottomsheetWidget extends StatelessWidget {
   final double payableBalance;
   const PaymentMethodBottomsheetWidget(
       {super.key, required this.payableBalance});
+
+  double get _roundedPayableBalance =>
+      PriceConverter.roundPayableAmount(payableBalance);
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +38,7 @@ class PaymentMethodBottomsheetWidget extends StatelessWidget {
               color: Theme.of(context).hintColor.withValues(alpha: 0.5)),
           const SizedBox(height: Dimensions.paddingSizeSmall),
           Image.asset(Images.withdrawMoneyIcon, height: 30, width: 30),
-          Text(PriceConverter.convertPrice(context, payableBalance),
+          Text(PriceConverter.convertPayablePrice(context, payableBalance),
               style:
                   textRobotoBold.copyWith(fontSize: Dimensions.fontSizeLarge)),
           const SizedBox(height: Dimensions.paddingSizeLarge),
@@ -157,7 +159,7 @@ class PaymentMethodBottomsheetWidget extends StatelessWidget {
                   ? () {
                       final result = {
                         'gateway': walletController.gateWay,
-                        'amount': payableBalance,
+                        'amount': _roundedPayableBalance,
                       };
                       Get.back(result: result);
                     }

@@ -26,19 +26,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAzHM8kymRO1cMM_3wW6Jm3FsHVSjVSXgc',
-    appId: '1:915395800328:android:dfd0a04552c6168fdc10bd',
-    messagingSenderId: '915395800328',
-    projectId: 'soutraly-vtc',
-    storageBucket: 'soutraly-vtc.firebasestorage.app',
+    apiKey: 'AIzaSyCO5Q6BfrmKly1xAQgxHs4b5ECHi9V9P2E',
+    appId: '1:286227810784:android:bb861d4adcc994fc04c385',
+    messagingSenderId: '286227810784',
+    projectId: 'soutraly-vtc-v2',
+    storageBucket: 'soutraly-vtc-v2.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBuBUBfVhU95Pu6McPVHyBg-OzJ2M0R8Zc',
-    appId: '1:915395800328:ios:4a884e7f78a6d52fdc10bd',
-    messagingSenderId: '915395800328',
-    projectId: 'soutraly-vtc',
-    storageBucket: 'soutraly-vtc.firebasestorage.app',
+    apiKey: 'AIzaSyClMY4N6hZwH8X46Hza0xoZIqDKicHL5O8',
+    appId: '1:286227810784:ios:cd637d3090f9474e04c385',
+    messagingSenderId: '286227810784',
+    projectId: 'soutraly-vtc-v2',
+    storageBucket: 'soutraly-vtc-v2.firebasestorage.app',
     iosBundleId: 'com.soutralyvtc.appchaufeur',
   );
 

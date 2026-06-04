@@ -15,8 +15,8 @@ import 'package:ride_sharing_user_app/features/profile/controllers/profile_contr
 import 'package:ride_sharing_user_app/features/profile/domain/models/profile_model.dart';
 import 'package:ride_sharing_user_app/features/profile/domain/models/vehicle_body.dart';
 import 'package:ride_sharing_user_app/features/profile/domain/models/vehicle_brand_model.dart';
-import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/helper/display_helper.dart';
+import 'package:ride_sharing_user_app/helper/dynamic_translation_helper.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
@@ -700,7 +700,8 @@ class _VehicleAddScreenState extends State<VehicleAddScreen> {
                                     return DropdownMenuItem<Brand>(
                                       value: item,
                                       child: Text(
-                                        item.name!.tr,
+                                        DynamicTranslationHelper.translate(
+                                            item.name),
                                         style: textRegular.copyWith(
                                           color: Theme.of(context)
                                               .textTheme
@@ -755,7 +756,8 @@ class _VehicleAddScreenState extends State<VehicleAddScreen> {
                                     return DropdownMenuItem<VehicleModels>(
                                       value: item,
                                       child: Text(
-                                        item.name!.tr,
+                                        DynamicTranslationHelper.translate(
+                                            item.name),
                                         style: textRegular.copyWith(
                                           color: Theme.of(context)
                                               .textTheme
@@ -796,7 +798,9 @@ class _VehicleAddScreenState extends State<VehicleAddScreen> {
                                     .contains(item.id);
                                 return FilterChip(
                                   selected: isSelected,
-                                  label: Text(item.name!.tr),
+                                  label: Text(
+                                      DynamicTranslationHelper.translate(
+                                          item.name)),
                                   onSelected: (_) => profileController
                                       .setCategoryIndex(item, true),
                                 );
@@ -825,17 +829,18 @@ class _VehicleAddScreenState extends State<VehicleAddScreen> {
                           ],
                         ),
                       ),
-                    TextFieldTitleWidget(
-                      title:
-                          "${'parcel_weight_capacity'.tr} (${Get.find<SplashController>().config?.parcelWeightUnit})",
-                    ),
-                    _textField(
-                      controller: parcelWeightCapacityController,
-                      focusNode: parcelWeightFocus,
-                      hint: 'enter_max_weight'.tr,
-                      keyboardType: TextInputType.number,
-                      nextFocus: licencePlateFocus,
-                    ),
+                    // Champ masque temporairement selon la demande metier.
+                    // TextFieldTitleWidget(
+                    //   title:
+                    //       "${'parcel_weight_capacity'.tr} (${Get.find<SplashController>().config?.parcelWeightUnit})",
+                    // ),
+                    // _textField(
+                    //   controller: parcelWeightCapacityController,
+                    //   focusNode: parcelWeightFocus,
+                    //   hint: 'enter_max_weight'.tr,
+                    //   keyboardType: TextInputType.number,
+                    //   nextFocus: licencePlateFocus,
+                    // ),
                     TextFieldTitleWidget(
                       title: 'IMMATRICULATION',
                       isRequired: true,
@@ -846,18 +851,18 @@ class _VehicleAddScreenState extends State<VehicleAddScreen> {
                       hint: 'EX: DB-3212',
                       nextFocus: vehicleYearFocus,
                     ),
-                    DatePickerWidget(
-                      title: "DATE D'EXPIRATION DU PERMIS DE CONDUIRE",
-                      text: licenceExpireDate != null
-                          ? profileController.dateFormat
-                              .format(licenceExpireDate!)
-                              .toString()
-                          : 'dd-mm-yyyy',
-                      image: Images.calender,
-                      requiredField: true,
-                      selectDate: () =>
-                          _pickDate((date) => licenceExpireDate = date),
-                    ),
+                    // DatePickerWidget(
+                    //   title: "DATE D'EXPIRATION DU PERMIS DE CONDUIRE",
+                    //   text: licenceExpireDate != null
+                    //       ? profileController.dateFormat
+                    //           .format(licenceExpireDate!)
+                    //           .toString()
+                    //       : 'dd-mm-yyyy',
+                    //   image: Images.calender,
+                    //   requiredField: true,
+                    //   selectDate: () =>
+                    //       _pickDate((date) => licenceExpireDate = date),
+                    // ),
                     TextFieldTitleWidget(
                       title: 'Annee du vehicule',
                       isRequired: true,

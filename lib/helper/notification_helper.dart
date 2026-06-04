@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:ride_sharing_user_app/firebase_options.dart';
 import 'package:ride_sharing_user_app/features/chat/controllers/chat_controller.dart';
 import 'package:ride_sharing_user_app/features/chat/screens/message_screen.dart';
 import 'package:ride_sharing_user_app/features/dashboard/controllers/bottom_menu_controller.dart';
@@ -37,10 +39,65 @@ import 'package:ride_sharing_user_app/features/ride/controllers/ride_controller.
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/features/trip/screens/payment_received_screen.dart';
 import 'package:ride_sharing_user_app/features/trip/screens/review_this_customer_screen.dart';
+import 'package:ride_sharing_user_app/helper/otp_push_helper.dart';
 
 class NotificationHelper {
+  static FlutterLocalNotificationsPlugin? _fln;
+  static final Map<String, DateTime> _lastIncomingAlertAtByTrip = {};
+  static const Duration _incomingAlertCooldown = Duration(seconds: 4);
+
+  static void _dispatchLog(String message) {
+    customPrint('[DISPATCH][NOTIF] $message');
+  }
+
+  static Future<void> showRideRequestNotification(
+      String title, String body) async {
+    if (_fln == null) {
+      _dispatchLog(
+          'showRideRequestNotification skipped: plugin not initialized');
+      return;
+    }
+    _dispatchLog('showRideRequestNotification title=$title');
+    await showTextNotification(title, body, '', 'new_ride_request', _fln!);
+  }
+
+  static Future<void> notifyIncomingRideSignal({
+    required String? tripId,
+    required String source,
+  }) async {
+    final id = (tripId ?? '').trim();
+    if (id.isEmpty) {
+      _dispatchLog(
+          'notifyIncomingRideSignal ignored: empty tripId source=$source');
+      return;
+    }
+
+    final now = DateTime.now();
+    final last = _lastIncomingAlertAtByTrip[id];
+    if (last != null && now.difference(last) < _incomingAlertCooldown) {
+      _dispatchLog(
+          'notifyIncomingRideSignal throttled trip_id=$id source=$source');
+      return;
+    }
+    _lastIncomingAlertAtByTrip[id] = now;
+
+    _dispatchLog('notifyIncomingRideSignal trip_id=$id source=$source');
+
+    await showRideRequestNotification(
+      'Nouvelle demande de trajet',
+      'Vous avez une nouvelle demande de trajet.',
+    );
+
+    try {
+      await Get.find<RideController>().playIncomingRideAlert();
+    } catch (e) {
+      _dispatchLog('playIncomingRideAlert failed: $e');
+    }
+  }
+
   static Future<void> initialize(
       FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin) async {
+    _fln = flutterLocalNotificationsPlugin;
     AndroidInitializationSettings androidInitialize =
         const AndroidInitializationSettings('notification_icon');
     var iOSInitialize = const DarwinInitializationSettings();
@@ -70,6 +127,11 @@ class NotificationHelper {
     );
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      if (OtpPushHelper.isOtpMessage(message.data)) {
+        OtpPushHelper.captureRemoteMessage(message);
+        return;
+      }
+
       AndroidInitializationSettings androidInitialize =
           const AndroidInitializationSettings('notification_icon');
       var iOSInitialize = const DarwinInitializationSettings();
@@ -85,9 +147,15 @@ class NotificationHelper {
         onDidReceiveBackgroundNotificationResponse: myBackgroundMessageReceiver,
       );
 
-      /// Show log for debug
-      if (kDebugMode) {
-        print('onMessage: ${message.data}');
+      _dispatchLog(
+          'onMessage action=${message.data['action']} type=${message.data['type']} status=${message.data['status']} pusher=${Get.find<SplashController>().pusherConnectionStatus}');
+
+      if (message.data['action'] == "new_ride_request" ||
+          message.data['action'] == "new_parcel_request") {
+        NotificationHelper.notifyIncomingRideSignal(
+          tripId: message.data['ride_request_id']?.toString(),
+          source: 'fcm.onMessage',
+        );
       }
 
       /// check maintenance mode
@@ -108,6 +176,7 @@ class NotificationHelper {
         if (Get.find<SplashController>().pusherConnectionStatus == null ||
             Get.find<SplashController>().pusherConnectionStatus ==
                 'Disconnected') {
+          _dispatchLog('routing via FCM fallback (pusher disconnected)');
           if (message.data['action'] == "new_ride_request" ||
               message.data['action'] == "new_parcel_request") {
             _whenNewRequestFound(message);
@@ -138,6 +207,7 @@ class NotificationHelper {
             });
           } else if (message.data['action'] == "customer_canceled_trip" ||
               message.data['action'] == "another_driver_assigned") {
+            Get.find<RideController>().playTripCanceledAlert();
             _whenCustomerCancelTrip(message);
           } else if (checkContainsAction(message.data['action'])) {
             Get.find<ProfileController>().getProfileInfo().then((value) {
@@ -180,6 +250,7 @@ class NotificationHelper {
             Get.bottomSheet(ReceiptConfirmationBottomsheet());
           } else if (message.data['action'] == 'parcel_canceled' ||
               message.data['action'] == 'trip_canceled') {
+            Get.find<RideController>().playTripCanceledAlert();
             Get.offAll(const DashboardScreen());
           } else if (message.data['action'] == 'referral_reward_received') {
             Get.find<ReferAndEarnController>().getEarningHistoryList(1);
@@ -194,6 +265,8 @@ class NotificationHelper {
 
           ///If web socket Not connected
         } else {
+          _dispatchLog(
+              'pusher connected: skipping duplicate new_ride_request handling from FCM');
           if (message.data['action'] == "bid_accepted") {
             ///Bid Ride Accepted in this case....
             _whenCustomerBidAccept(message);
@@ -238,6 +311,7 @@ class NotificationHelper {
             Get.bottomSheet(ReceiptConfirmationBottomsheet());
           } else if (message.data['action'] == 'parcel_canceled' ||
               message.data['action'] == 'trip_canceled') {
+            Get.find<RideController>().playTripCanceledAlert();
             Get.offAll(const DashboardScreen());
           } else if (message.data['action'] == 'referral_reward_received') {
             Get.find<ReferAndEarnController>().getEarningHistoryList(1);
@@ -257,6 +331,8 @@ class NotificationHelper {
             message.data['type'] == 'maintenance_mode_on' ||
             message.data['type'] == 'maintenance_mode_off')) {
           if (message.data['status'] == '1') {
+            _dispatchLog(
+                'show local notification action=${message.data['action']}');
             NotificationHelper.showNotification(
                 message, flutterLocalNotificationsPlugin, true);
           }
@@ -275,6 +351,10 @@ class NotificationHelper {
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       customPrint('onOpenApp: ${message.data}');
+      if (OtpPushHelper.isOtpMessage(message.data)) {
+        OtpPushHelper.captureRemoteMessage(message);
+        return;
+      }
       notificationToRoute(message.data);
     });
   }
@@ -468,6 +548,7 @@ class NotificationHelper {
       Get.find<BottomMenuController>().setTabIndex(3);
     } else if (data['action'] == "customer_canceled_trip" ||
         data['action'] == "another_driver_assigned") {
+      Get.find<RideController>().playTripCanceledAlert();
       Get.find<RideController>().getPendingRideRequestList(1).then((value) {
         Get.find<RideController>().tripDetail = null;
         if (value.statusCode == 200) {
@@ -609,12 +690,43 @@ class NotificationHelper {
 
 Future<dynamic> myBackgroundMessageHandler(RemoteMessage remoteMessage) async {
   customPrint('onBackground: ${remoteMessage.data}');
-  // var androidInitialize = new AndroidInitializationSettings('notification_icon');
-  // var iOSInitialize = new IOSInitializationSettings();
-  // var initializationsSettings = new InitializationSettings(android: androidInitialize, iOS: iOSInitialize);
-  // FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  // flutterLocalNotificationsPlugin.initialize(initializationsSettings);
-  // NotificationHelper.showNotification(message, flutterLocalNotificationsPlugin, true);
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+
+  await OtpPushHelper.captureRemoteMessage(remoteMessage);
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  const AndroidInitializationSettings androidInitialize =
+      AndroidInitializationSettings('notification_icon');
+  const DarwinInitializationSettings iOSInitialize =
+      DarwinInitializationSettings();
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: androidInitialize, iOS: iOSInitialize);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  if (remoteMessage.data.isNotEmpty) {
+    if (OtpPushHelper.isOtpMessage(remoteMessage.data)) {
+      return;
+    }
+
+    final String title = remoteMessage.data['title'] ?? '';
+    final String body = remoteMessage.data['body'] ?? '';
+    final String action = remoteMessage.data['action'] ?? '';
+    if (title.isNotEmpty || body.isNotEmpty) {
+      await NotificationHelper.showBigTextNotification(
+        title,
+        body,
+        remoteMessage.data['ride_request_id'] ?? '',
+        action,
+        flutterLocalNotificationsPlugin,
+      );
+    }
+  }
 }
 
 Future<dynamic> myBackgroundMessageReceiver(
@@ -637,6 +749,14 @@ bool checkContainsAction(String action) {
 }
 
 void _whenNewRequestFound(RemoteMessage message) {
+  customPrint(
+      '[DISPATCH][NOTIF] _whenNewRequestFound ride_request_id=${message.data['ride_request_id']}');
+
+  NotificationHelper.notifyIncomingRideSignal(
+    tripId: message.data['ride_request_id']?.toString(),
+    source: 'fcm._whenNewRequestFound',
+  );
+
   Get.find<RideController>().ongoingTripList().then((value) {
     if ((Get.find<RideController>().ongoingTrip ?? []).isEmpty) {
       Get.find<RideController>().getPendingRideRequestList(1);
@@ -647,11 +767,16 @@ void _whenNewRequestFound(RemoteMessage message) {
           .getRideDetailBeforeAccept(message.data['ride_request_id'])
           .then((value) {
         if (value.statusCode == 200) {
+          customPrint(
+              '[DISPATCH][NOTIF] ride detail loaded for ride_request_id=${message.data['ride_request_id']}');
           Get.find<RideController>().playIncomingRideAlert(
               incomingTrip: Get.find<RideController>().tripDetail);
           Get.find<RiderMapController>().setRideCurrentState(RideState.pending);
           Get.find<RideController>().updateRoute(false, notify: true);
           Get.to(() => const MapScreen());
+        } else {
+          customPrint(
+              '[DISPATCH][NOTIF] ride detail load failed status=${value.statusCode} ride_request_id=${message.data['ride_request_id']}');
         }
       });
     } else {

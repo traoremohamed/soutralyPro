@@ -40,9 +40,11 @@ class AuthRepository implements AuthRepositoryInterface {
   }
 
   @override
-  Future<Response?> sendOtp({required String phone}) async {
-    return await apiClient
-        .postData(AppConstants.sendOtp, {"phone_or_email": phone});
+  Future<Response?> sendOtp({required String phone, String? fcmToken}) async {
+    return await apiClient.postData(AppConstants.sendOtp, {
+      "phone_or_email": phone,
+      if (fcmToken != null && fcmToken.isNotEmpty) "fcm_token": fcmToken,
+    });
   }
 
   @override

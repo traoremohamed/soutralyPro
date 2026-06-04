@@ -4,8 +4,8 @@ import 'package:ride_sharing_user_app/common_widgets/button_widget.dart';
 import 'package:ride_sharing_user_app/features/home/screens/vehicle_add_screen.dart';
 import 'package:ride_sharing_user_app/features/profile/controllers/profile_controller.dart';
 import 'package:ride_sharing_user_app/features/profile/widgets/profile_item_widget.dart';
-import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/helper/date_converter.dart';
+import 'package:ride_sharing_user_app/helper/dynamic_translation_helper.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
@@ -32,8 +32,10 @@ class VehicleDetailsWidget extends StatelessWidget {
       final List<String> names = profileController.categoryList
           .where((category) =>
               category.id != null && categoryIds.contains(category.id))
-          .map((category) => category.name?.tr ?? '')
+          .map((category) =>
+              DynamicTranslationHelper.translate(category.name, fallback: ''))
           .where((name) => name.isNotEmpty)
+          .cast<String>()
           .toList();
 
       if (names.isNotEmpty) {
@@ -41,7 +43,8 @@ class VehicleDetailsWidget extends StatelessWidget {
       }
     }
 
-    return vehicle?.category?.name?.tr ?? '--';
+    return DynamicTranslationHelper.translate(vehicle?.category?.name,
+        fallback: '--');
   }
 
   String _documentStatus(String? recto, String? verso) {
@@ -71,8 +74,8 @@ class VehicleDetailsWidget extends StatelessWidget {
               child: Column(children: [
                 ProfileItemWidget(
                   title: 'vehicle_category_type',
-                  value: profileController
-                      .profileInfo!.vehicle!.category!.type!.tr,
+                  value: DynamicTranslationHelper.translate(
+                      profileController.profileInfo!.vehicle!.category!.type),
                 ),
                 ProfileItemWidget(
                   title: 'vehicle_category',
@@ -80,21 +83,22 @@ class VehicleDetailsWidget extends StatelessWidget {
                 ),
                 ProfileItemWidget(
                   title: 'vehicle_brand',
-                  value:
-                      profileController.profileInfo?.vehicle?.brand?.name ?? '',
+                  value: DynamicTranslationHelper.translate(
+                      profileController.profileInfo?.vehicle?.brand?.name),
                 ),
                 ProfileItemWidget(
                   title: 'vehicle_model',
-                  value:
-                      profileController.profileInfo?.vehicle?.model?.name ?? '',
+                  value: DynamicTranslationHelper.translate(
+                      profileController.profileInfo?.vehicle?.model?.name),
                 ),
-                if (_isShowParcelWeight(
-                    profileController.profileInfo?.details?.services))
-                  ProfileItemWidget(
-                    title: 'parcel_weight_capacity',
-                    value:
-                        '${profileController.profileInfo?.vehicle?.parcelWeightCapacity ?? 'unlimited'.tr} ${Get.find<SplashController>().config?.parcelWeightUnit}',
-                  ),
+                // Masque temporairement la ligne capacite de poids du colis.
+                // if (_isShowParcelWeight(
+                //     profileController.profileInfo?.details?.services))
+                //   ProfileItemWidget(
+                //     title: 'parcel_weight_capacity',
+                //     value:
+                //         '${profileController.profileInfo?.vehicle?.parcelWeightCapacity ?? 'unlimited'.tr} ${Get.find<SplashController>().config?.parcelWeightUnit}',
+                //   ),
                 ProfileItemWidget(
                   title: 'IMMATRICULATION',
                   value: profileController
@@ -194,46 +198,173 @@ class VehicleDetailsWidget extends StatelessWidget {
 
   Widget _pricingSection(
       ProfileController profileController, BuildContext context) {
+    final bool brandingEnabled = profileController.brandingEnabled;
+    final double monthlyAmount = profileController.brandingMonthlyAmount;
+    final int selectedMonths = profileController.brandingMonths;
+    final double totalAmount = monthlyAmount * selectedMonths;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(Dimensions.radiusDefault),
+        border: Border.all(
+          color: brandingEnabled
+              ? Theme.of(context).primaryColor.withValues(alpha: 0.25)
+              : Theme.of(context).hintColor.withValues(alpha: 0.12),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'BRANDING',
-            style: textBold.copyWith(fontSize: Dimensions.fontSizeDefault),
-          ),
-          const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-          Text(
-            'Option de branding',
-            style: textRegular.copyWith(color: Theme.of(context).primaryColor),
-          ),
-          const SizedBox(height: Dimensions.paddingSizeExtraSmall),
-          Text(
-            'Cout du branding: 5000 FCFA',
-            style: textMedium.copyWith(
-              color: Theme.of(context).textTheme.bodyMedium?.color,
+      child: Opacity(
+        opacity: brandingEnabled ? 1 : 0.55,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Checkbox(
+                  value: brandingEnabled,
+                  onChanged: (value) {
+                    profileController.setBrandingEnabled(value ?? false);
+                  },
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Zone branding',
+                        style: textBold.copyWith(
+                            fontSize: Dimensions.fontSizeDefault),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Activez la visibilité de votre véhicule sur la plateforme.',
+                        style: textRegular.copyWith(
+                            color: Theme.of(context).hintColor,
+                            fontSize: Dimensions.fontSizeSmall),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Get.dialog(
+                    AlertDialog(
+                      title: const Text('Avantages du branding'),
+                      content: const Text(
+                        'Le branding améliore la visibilité de votre véhicule, renforce la confiance des clients et peut augmenter vos chances d\'obtenir plus de courses dans les zones actives.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Get.back(),
+                          child: const Text('Compris'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.info_outline,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: Dimensions.paddingSizeSmall),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Durée de souscription',
+                    style: textMedium.copyWith(
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Dimensions.paddingSizeSmall,
+                    vertical: Dimensions.paddingSizeExtraSmall,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.08),
+                    borderRadius:
+                        BorderRadius.circular(Dimensions.paddingSizeExtraSmall),
+                  ),
+                  child: Text(
+                    '${monthlyAmount.toStringAsFixed(0)} FCFA / mois',
+                    style: textBold.copyWith(
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Dimensions.paddingSizeSmall),
+            DropdownButtonFormField<int>(
+              initialValue: profileController.brandingAllowedMonths
+                      .contains(selectedMonths)
+                  ? selectedMonths
+                  : profileController.brandingAllowedMonths.isNotEmpty
+                      ? profileController.brandingAllowedMonths.first
+                      : 3,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: Dimensions.paddingSizeSmall,
+                  vertical: Dimensions.paddingSizeSmall,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius:
+                      BorderRadius.circular(Dimensions.paddingSizeSmall),
+                ),
+              ),
+              items: profileController.brandingAllowedMonths
+                  .map(
+                    (month) => DropdownMenuItem<int>(
+                      value: month,
+                      child: Text('$month mois'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: brandingEnabled
+                  ? (value) {
+                      if (value != null) {
+                        profileController.setBrandingMonths(value);
+                      }
+                    }
+                  : null,
+            ),
+            const SizedBox(height: Dimensions.paddingSizeSmall),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Coût total',
+                  style: textMedium.copyWith(
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                ),
+                Text(
+                  '${totalAmount.toStringAsFixed(0)} FCFA',
+                  style: textBold.copyWith(
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Dimensions.paddingSizeSmall),
+            ButtonWidget(
+              width: Get.width,
+              buttonText: 'Enregistrer le branding',
+              onPressed: profileController.brandingUpdating
+                  ? null
+                  : () async {
+                      await profileController.submitDriverBranding();
+                    },
+            ),
+          ],
+        ),
       ),
     );
-  }
-
-  bool _isShowParcelWeight(List<String>? services) {
-    if (services == null) {
-      return false;
-    } else {
-      if (services.contains('parcel')) {
-        return true;
-      } else {
-        return false;
-      }
-    }
   }
 }

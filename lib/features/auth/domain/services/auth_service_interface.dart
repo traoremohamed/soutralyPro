@@ -10,7 +10,7 @@ abstract class AuthServiceInterface {
       XFile? profileImage,
       List<MultipartBody>? identityImage,
       List<MultipartDocument>? documents});
-  Future<dynamic> sendOtp({required String phone});
+  Future<dynamic> sendOtp({required String phone, String? fcmToken});
   Future<dynamic> verifyOtp({required String phone, required String otp});
   Future<dynamic> verifyFirebaseOtp(
       {required String phone, required String otp, required String session});

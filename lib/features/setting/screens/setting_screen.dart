@@ -278,49 +278,57 @@ class _SettingScreenState extends State<SettingScreen> {
                   ]),
                 ),
                 const SizedBox(height: Dimensions.paddingSize),
-                Container(
-                  decoration: BoxDecoration(
-                      borderRadius:
-                          BorderRadius.circular(Dimensions.paddingSize),
-                      border: Border.all(
-                          color: Theme.of(context).hintColor, width: .5)),
-                  child: InkWell(
-                    onTap: () {
-                      Get.bottomSheet(
-                          GetBuilder<AuthController>(builder: (authController) {
-                        return ConfirmationBottomsheetWidget(
-                          icon: Images.logOutIcon,
-                          isLoading: authController.logging,
-                          title: 'permanently_delete_account'.tr,
-                          description:
-                              'do_you_want_to_delete_this_account_permanently'
-                                  .tr,
-                          onYesPressed: () => authController.permanentDelete(),
-                          onNoPressed: () => Get.back(),
-                          fontSize: Dimensions.fontSizeLarge,
-                          color: Colors.black.withValues(alpha: 0.7),
-                        );
-                      }));
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: Dimensions.paddingSizeDefault,
-                          vertical: Dimensions.paddingSizeDefault),
-                      child: Row(children: [
-                        SizedBox(
-                          width: Dimensions.iconSizeLarge,
-                          child: Image.asset(Images.logOutIcon,
-                              color: Colors.black.withValues(alpha: 0.7)),
-                        ),
-                        const SizedBox(width: Dimensions.paddingSizeDefault),
-                        Text('permanently_delete_account'.tr,
-                            style: textSemiBold.copyWith(
-                                color: Colors.black.withValues(alpha: 0.7),
-                                fontSize: Dimensions.fontSizeLarge)),
-                      ]),
-                    ),
-                  ),
-                ),
+                // Masque temporairement le bouton de suppression definitive du compte.
+                // Container(
+                //   decoration: BoxDecoration(
+                //       borderRadius:
+                //           BorderRadius.circular(Dimensions.paddingSize),
+                //       border: Border.all(
+                //           color: Theme.of(context).hintColor, width: .5)),
+                //   child: InkWell(
+                //     onTap: () {
+                //       Get.bottomSheet(
+                //           GetBuilder<AuthController>(builder: (authController) {
+                //         return ConfirmationBottomsheetWidget(
+                //           icon: Images.logOutIcon,
+                //           isLoading: authController.logging,
+                //           title: 'permanently_delete_account'.tr,
+                //           description:
+                //               'do_you_want_to_delete_this_account_permanently'
+                //                   .tr,
+                //           onYesPressed: () => authController.permanentDelete(),
+                //           onNoPressed: () => Get.back(),
+                //           fontSize: Dimensions.fontSizeLarge,
+                //           color: Colors.black.withValues(alpha: 0.7),
+                //         );
+                //       }));
+                //     },
+                //     child: Padding(
+                //       padding: const EdgeInsets.symmetric(
+                //           horizontal: Dimensions.paddingSizeDefault,
+                //           vertical: Dimensions.paddingSizeDefault),
+                //       child: Row(children: [
+                //         SizedBox(
+                //           width: Dimensions.iconSizeLarge,
+                //           child: Image.asset(Images.logOutIcon,
+                //               color: Colors.black.withValues(alpha: 0.7)),
+                //         ),
+                //         const SizedBox(width: Dimensions.paddingSizeDefault),
+                //         Expanded(
+                //           child: Text(
+                //             'permanently_delete_account'.tr,
+                //             maxLines: 1,
+                //             overflow: TextOverflow.ellipsis,
+                //             style: textSemiBold.copyWith(
+                //               color: Colors.black.withValues(alpha: 0.7),
+                //               fontSize: Dimensions.fontSizeLarge,
+                //             ),
+                //           ),
+                //         ),
+                //       ]),
+                //     ),
+                //   ),
+                // ),
               ]),
             ),
           );

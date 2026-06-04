@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyBuBUBfVhU95Pu6McPVHyBg-OzJ2M0R8Zc</string>
+	<string>AIzaSyClMY4N6hZwH8X46Hza0xoZIqDKicHL5O8</string>
 	<key>GCM_SENDER_ID</key>
-	<string>915395800328</string>
+	<string>286227810784</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.soutralyvtc.appchaufeur</string>
 	<key>PROJECT_ID</key>
-	<string>soutraly-vtc</string>
+	<string>soutraly-vtc-v2</string>
 	<key>STORAGE_BUCKET</key>
-	<string>soutraly-vtc.firebasestorage.app</string>
+	<string>soutraly-vtc-v2.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:915395800328:ios:4a884e7f78a6d52fdc10bd</string>
+	<string>1:286227810784:ios:cd637d3090f9474e04c385</string>
 </dict>
 </plist>

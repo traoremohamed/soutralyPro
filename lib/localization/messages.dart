@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:ride_sharing_user_app/helper/dynamic_translation_helper.dart';
 
 class Messages extends Translations {
   final Map<String, Map<String, String>> languages;
@@ -6,6 +7,13 @@ class Messages extends Translations {
 
   @override
   Map<String, Map<String, String>> get keys {
-    return languages;
+    final Map<String, Map<String, String>> merged = {};
+    languages.forEach((locale, values) {
+      merged[locale] = Map<String, String>.from(values);
+      if (locale.toLowerCase().startsWith('fr')) {
+        merged[locale]!.addAll(DynamicTranslationHelper.frenchTranslations);
+      }
+    });
+    return merged;
   }
 }

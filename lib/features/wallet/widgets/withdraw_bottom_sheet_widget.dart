@@ -25,21 +25,7 @@ class WithdrawRequestWidgetState extends State<WithdrawRequestWidget> {
 
   @override
   void initState() {
-    ProfileController profileController = Get.find<ProfileController>();
-    (profileController.profileInfo?.wallet?.receivableBalance ?? 0) -
-                (profileController.profileInfo?.wallet?.payableBalance ?? 0) >
-            0
-        ? _balanceController.text = PriceConverter.convertPrice(
-            context,
-            ((profileController.profileInfo?.wallet?.receivableBalance ?? 0) -
-                (profileController.profileInfo?.wallet?.payableBalance ?? 0)),
-          )
-        : _balanceController.text = PriceConverter.convertPrice(
-            context,
-            ((profileController.profileInfo?.wallet?.payableBalance ?? 0) -
-                (profileController.profileInfo?.wallet?.receivableBalance ??
-                    0)),
-          );
+    _balanceController.text = '';
     super.initState();
   }
 
@@ -232,7 +218,7 @@ class WithdrawRequestWidgetState extends State<WithdrawRequestWidget> {
                                   : Theme.of(context).colorScheme.error,
                             ),
                             decoration: InputDecoration(
-                              hintText: 'enter_amount'.tr,
+                              hintText: 'Entrer le montant',
                               hintStyle: textRegular.copyWith(
                                 color: Theme.of(context)
                                     .hintColor
@@ -260,8 +246,8 @@ class WithdrawRequestWidgetState extends State<WithdrawRequestWidget> {
                             },
                             onChanged: (String amount) {
                               _balanceController.text =
-                                  '${Get.find<SplashController>().config?.currencySymbol ?? 'F CFA'}'
-                                  '${amount.replaceAll(Get.find<SplashController>().config?.currencySymbol ?? 'F CFA', '')}';
+                                  '${Get.find<SplashController>().config?.currencySymbol ?? 'FCFA'}'
+                                  '${amount.replaceAll(Get.find<SplashController>().config?.currencySymbol ?? 'FCFA', '')}';
                             },
                           )),
                           Divider(
@@ -287,7 +273,7 @@ class WithdrawRequestWidgetState extends State<WithdrawRequestWidget> {
                                       walletController
                                           .toggleHaveWithdrawAmount(true);
                                       _balanceController.text =
-                                          PriceConverter.convertPrice(
+                                          PriceConverter.convertPayablePrice(
                                         context,
                                         walletController.suggestedAmount[index]
                                             .toDouble(),
@@ -438,7 +424,7 @@ class WithdrawRequestWidgetState extends State<WithdrawRequestWidget> {
     balance = _balanceController.text
         .trim()
         .replaceAll(
-            Get.find<SplashController>().config?.currencySymbol ?? 'F CFA', '')
+            Get.find<SplashController>().config?.currencySymbol ?? 'FCFA', '')
         .replaceAll(' ', '')
         .replaceAll(',', '');
     note = noteController.text.trim();
@@ -457,7 +443,7 @@ class WithdrawRequestWidgetState extends State<WithdrawRequestWidget> {
       );
     } else if (bal < 1) {
       showCustomSnackBar(
-          "${'minimum_amount'.tr} ${Get.find<SplashController>().config?.currencySymbol ?? 'F CFA'} 1");
+          "${'minimum_amount'.tr} ${Get.find<SplashController>().config?.currencySymbol ?? 'FCFA'} 1");
     } else {
       Get.find<WalletController>().updateBalance(balance, note);
     }

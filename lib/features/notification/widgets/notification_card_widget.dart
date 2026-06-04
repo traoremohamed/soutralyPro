@@ -7,6 +7,7 @@ import 'package:ride_sharing_user_app/features/refer_and_earn/screens/refer_and_
 import 'package:ride_sharing_user_app/features/ride/screens/ride_request_list_screen.dart';
 import 'package:ride_sharing_user_app/features/trip/screens/trip_details_screen.dart';
 import 'package:ride_sharing_user_app/helper/date_converter.dart';
+import 'package:ride_sharing_user_app/helper/dynamic_translation_helper.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
@@ -17,72 +18,95 @@ class NotificationCardWidget extends StatelessWidget {
   final Notifications? previousNotification;
   final Notifications? nextNotification;
   final int? index;
-  const NotificationCardWidget({super.key, required this.notification, required this.nextNotification, required this.previousNotification, this.index});
+  const NotificationCardWidget(
+      {super.key,
+      required this.notification,
+      required this.nextNotification,
+      required this.previousNotification,
+      this.index});
 
   @override
   Widget build(BuildContext context) {
+    final String translatedTitle = _translateNotificationText(
+      notification.title ?? '',
+      action: notification.action ?? '',
+      isTitle: true,
+    );
+    final String translatedDescription = _translateNotificationText(
+      notification.description ?? '',
+      action: notification.action ?? '',
+      isTitle: false,
+    );
+
     int currentNotificationMinutes = calculateMinute(notification.createdAt!);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
+      padding:
+          const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeDefault),
       child: InkWell(
         onTap: () {
-          Get.find<NotificationController>().sendReadStatus(notification.id ?? 0, index ?? 0);
+          Get.find<NotificationController>()
+              .sendReadStatus(notification.id ?? 0, index ?? 0);
 
-          if(notification.action == 'new_ride_request' || notification.action == 'new_parcel_request'){
-            Get.to(()=> RideRequestScreen());
-
-          }else{
+          if (notification.action == 'new_ride_request' ||
+              notification.action == 'new_parcel_request') {
+            Get.to(() => RideRequestScreen());
+          } else {
             Get.bottomSheet(Container(
               width: Get.width,
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
-                borderRadius:const BorderRadius.only(
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(Dimensions.paddingSizeLarge),
                   topRight: Radius.circular(Dimensions.paddingSizeLarge),
                 ),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(Dimensions.paddingSizeDefault),
-                child: Column(mainAxisSize: MainAxisSize.min,children: [
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const SizedBox(height: Dimensions.paddingSizeLarge),
-
                   Container(
                     padding: const EdgeInsets.all(Dimensions.paddingSize),
-                    margin: const EdgeInsets.only(right: Dimensions.paddingSizeSmall),
+                    margin: const EdgeInsets.only(
+                        right: Dimensions.paddingSizeSmall),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(Dimensions.paddingSizeSmall),
+                      color: Theme.of(context)
+                          .primaryColor
+                          .withValues(alpha: 0.10),
+                      borderRadius:
+                          BorderRadius.circular(Dimensions.paddingSizeSmall),
                     ),
                     child: Image.asset(
                       _getIcons(notification.notificationType ?? ''),
-                      width: 20,height: 20,
+                      width: 20,
+                      height: 20,
                       fit: BoxFit.cover,
                       color: Theme.of(context).primaryColor,
                     ),
                   ),
                   const SizedBox(height: Dimensions.paddingSizeSmall),
-
-                  Text(notification.title ?? '',style: textBold,textAlign: TextAlign.center),
+                  Text(translatedTitle,
+                      style: textBold, textAlign: TextAlign.center),
                   const SizedBox(height: Dimensions.paddingSizeSmall),
-
                   Text(
-                    notification.description ?? '',textAlign: TextAlign.center,
-                    style: textRegular.copyWith(color: Theme.of(context).hintColor),
+                    translatedDescription,
+                    textAlign: TextAlign.center,
+                    style: textRegular.copyWith(
+                        color: Theme.of(context).hintColor),
                   ),
                   const SizedBox(height: Dimensions.paddingSizeSmall),
-
                   InkWell(
-                      onTap: ()=> _navigateOnclickRoute(notification.action ?? '', notification.rideRequestId ?? ''),
+                      onTap: () => _navigateOnclickRoute(
+                          notification.action ?? '',
+                          notification.rideRequestId ?? ''),
                       child: Text(
                         _getNotificationButtonText(notification.action ?? ''),
                         style: textRegular.copyWith(
                           color: Theme.of(context).colorScheme.surfaceContainer,
                           decoration: TextDecoration.underline,
-                          decorationColor: Theme.of(context).colorScheme.surfaceContainer,
+                          decorationColor:
+                              Theme.of(context).colorScheme.surfaceContainer,
                         ),
-                      )
-                  ),
-
+                      )),
                   const SizedBox(height: 30),
                 ]),
               ),
@@ -90,24 +114,37 @@ class NotificationCardWidget extends StatelessWidget {
           }
         },
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if(previousNotification == null)
+          if (previousNotification == null)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
-              child: Text(DateConverter.isoStringToLocalDateAndMonthOnly(notification.createdAt!) ==  DateConverter.localDateTimeToDateAndMonthOnly(DateTime.now()) ?
-              'today'.tr :
-              DateConverter.isoStringToLocalDateAndMonthOnly(notification.createdAt!) ==  DateConverter.localDateTimeToDateAndMonthOnly(DateTime.now().subtract(const Duration(days: 1))) ?
-              'last_day'.tr :
-              DateConverter.isoDateTimeStringToDateOnly(notification.createdAt!),
-                style: textRegular.copyWith(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.4)),
+              padding: const EdgeInsets.symmetric(
+                  vertical: Dimensions.paddingSizeSmall),
+              child: Text(
+                DateConverter.toFrenchDateOnly(notification.createdAt) ==
+                        DateConverter.toFrenchDateOnly(
+                            DateTime.now().toIso8601String())
+                    ? 'today'.tr
+                    : DateConverter.toFrenchDateOnly(notification.createdAt) ==
+                            DateConverter.toFrenchDateOnly(DateTime.now()
+                                .subtract(const Duration(days: 1))
+                                .toIso8601String())
+                        ? 'last_day'.tr
+                        : DateConverter.toFrenchDateOnly(
+                            notification.createdAt),
+                style: textRegular.copyWith(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.4)),
               ),
             ),
-
           Container(
             decoration: BoxDecoration(
-              color: Get.isDarkMode ?
-              Theme.of(context).scaffoldBackgroundColor :
-              Theme.of(context).hintColor.withValues(alpha: 0.07),
-              borderRadius: const BorderRadius.all(Radius.circular(Dimensions.radiusLarge)),
+              color: Get.isDarkMode
+                  ? Theme.of(context).scaffoldBackgroundColor
+                  : Theme.of(context).hintColor.withValues(alpha: 0.07),
+              borderRadius: const BorderRadius.all(
+                  Radius.circular(Dimensions.radiusLarge)),
             ),
             padding: const EdgeInsets.symmetric(
               horizontal: Dimensions.paddingSizeDefault,
@@ -117,79 +154,134 @@ class NotificationCardWidget extends StatelessWidget {
             child: Row(children: [
               Container(
                 padding: const EdgeInsets.all(Dimensions.paddingSize),
-                margin: const EdgeInsets.only(right: Dimensions.paddingSizeSmall),
+                margin:
+                    const EdgeInsets.only(right: Dimensions.paddingSizeSmall),
                 decoration: BoxDecoration(
-                  color: (notification.isRead ?? false) ?
-                  Theme.of(context).hintColor.withValues(alpha: 0.1) :
-                  Theme.of(context).primaryColor.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(Dimensions.paddingSizeSmall),
+                  color: (notification.isRead ?? false)
+                      ? Theme.of(context).hintColor.withValues(alpha: 0.1)
+                      : Theme.of(context).primaryColor.withValues(alpha: 0.05),
+                  borderRadius:
+                      BorderRadius.circular(Dimensions.paddingSizeSmall),
                 ),
                 child: Image.asset(
                   _getIcons(notification.notificationType ?? ''),
-                  width: 20,height: 20,
+                  width: 20,
+                  height: 20,
                   fit: BoxFit.cover,
-                  color: (notification.isRead ?? false) ? Theme.of(context).hintColor : Theme.of(context).primaryColor,
+                  color: (notification.isRead ?? false)
+                      ? Theme.of(context).hintColor
+                      : Theme.of(context).primaryColor,
                 ),
               ),
-
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(child: Padding(
-                      padding: const EdgeInsets.only(right: Dimensions.paddingSizeExtraLarge),
-                      child: Text(notification.title ?? '',
-                        style: (notification.isRead ?? false) ? textRegular.copyWith(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)) : textRegular,
-                        maxLines: 1,overflow: TextOverflow.ellipsis,
-                      ),
-                    )),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeExtraSmall),
-                      child: Text(
-                        currentNotificationMinutes < 60 ?
-                        '$currentNotificationMinutes ${'min_ago'.tr}' :
-                        DateConverter.isoDateTimeStringToLocalTime(notification.createdAt!),
-                        style: textRegular.copyWith(
-                          fontSize: Dimensions.fontSizeExtraSmall,
-                          color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Expanded(
+                            child: Padding(
+                          padding: const EdgeInsets.only(
+                              right: Dimensions.paddingSizeExtraLarge),
+                          child: Text(
+                            translatedTitle,
+                            style: (notification.isRead ?? false)
+                                ? textRegular.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color
+                                        ?.withValues(alpha: 0.7))
+                                : textRegular,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: Dimensions.paddingSizeExtraSmall),
+                          child: Text(
+                            currentNotificationMinutes < 60
+                                ? '$currentNotificationMinutes ${'min_ago'.tr}'
+                                : DateConverter.toFrenchTime(
+                                    notification.createdAt),
+                            style: textRegular.copyWith(
+                              fontSize: Dimensions.fontSizeExtraSmall,
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.color
+                                  ?.withValues(alpha: 0.7),
+                            ),
+                          ),
                         ),
+                      ]),
+                      Text(
+                        translatedDescription,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: (notification.isRead ?? false)
+                            ? textRegular.copyWith(
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.color
+                                    ?.withValues(alpha: 0.4))
+                            : textRegular.copyWith(
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.color
+                                    ?.withValues(alpha: 0.7)),
                       ),
-                    ),
-                  ]),
-
-                  Text(
-                      notification.description ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    style: (notification.isRead ?? false) ?
-                    textRegular.copyWith(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.4)) :
-                    textRegular.copyWith(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
-                  ),
-
-                ]),
+                    ]),
               ),
             ]),
           ),
-
-          if(((nextNotification == null) && (previousNotification != null) &&
-              (DateConverter.isoStringToLocalDateAndMonthOnly(notification.createdAt!) != DateConverter.isoStringToLocalDateAndMonthOnly(previousNotification!.createdAt!))))
+          if (((nextNotification == null) &&
+              (previousNotification != null) &&
+              (DateConverter.toFrenchDateOnly(notification.createdAt) !=
+                  DateConverter.toFrenchDateOnly(
+                      previousNotification!.createdAt))))
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
-              child: Text(DateConverter.isoStringToLocalDateAndMonthOnly(notification.createdAt!) ==  DateConverter.localDateTimeToDateAndMonthOnly(DateTime.now().subtract(const Duration(days: 1))) ?
-              'last_day'.tr :
-              DateConverter.isoDateTimeStringToDateOnly(notification.createdAt ?? '2024-07-13T04:59:40.000000Z'),
-                style: textRegular.copyWith(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.4)),
+              padding: const EdgeInsets.symmetric(
+                  vertical: Dimensions.paddingSizeSmall),
+              child: Text(
+                DateConverter.toFrenchDateOnly(notification.createdAt) ==
+                        DateConverter.toFrenchDateOnly(DateTime.now()
+                            .subtract(const Duration(days: 1))
+                            .toIso8601String())
+                    ? 'last_day'.tr
+                    : DateConverter.toFrenchDateOnly(notification.createdAt ??
+                        '2024-07-13T04:59:40.000000Z'),
+                style: textRegular.copyWith(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.4)),
               ),
             ),
-
-          if((nextNotification != null) &&
-              (DateConverter.isoStringToLocalDateAndMonthOnly(notification.createdAt!) != DateConverter.isoStringToLocalDateAndMonthOnly(nextNotification!.createdAt!)))
+          if ((nextNotification != null) &&
+              (DateConverter.toFrenchDateOnly(notification.createdAt) !=
+                  DateConverter.toFrenchDateOnly(nextNotification!.createdAt)))
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeSmall),
-              child: Text(DateConverter.isoStringToLocalDateAndMonthOnly(nextNotification!.createdAt!) ==  DateConverter.localDateTimeToDateAndMonthOnly(DateTime.now().subtract(const Duration(days: 1))) ?
-              'last_day'.tr :
-              DateConverter.isoDateTimeStringToDateOnly(nextNotification?.createdAt ?? '2024-07-13T04:59:40.000000Z'),
-                style: textRegular.copyWith(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.4)),
+              padding: const EdgeInsets.symmetric(
+                  vertical: Dimensions.paddingSizeSmall),
+              child: Text(
+                DateConverter.toFrenchDateOnly(nextNotification!.createdAt) ==
+                        DateConverter.toFrenchDateOnly(DateTime.now()
+                            .subtract(const Duration(days: 1))
+                            .toIso8601String())
+                    ? 'last_day'.tr
+                    : DateConverter.toFrenchDateOnly(
+                        nextNotification?.createdAt ??
+                            '2024-07-13T04:59:40.000000Z'),
+                style: textRegular.copyWith(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.4)),
               ),
             ),
         ]),
@@ -197,18 +289,19 @@ class NotificationCardWidget extends StatelessWidget {
     );
   }
 
-  void _navigateOnclickRoute(String action,String tripId){
-    if(action == 'referral_reward_received'){
+  void _navigateOnclickRoute(String action, String tripId) {
+    if (action == 'referral_reward_received') {
       Get.find<ReferAndEarnController>().setReferralTypeIndex(1);
       Get.to(() => const ReferAndEarnScreen());
-    }else if(action == 'debited_from_wallet' || action == 'parcel_refund_request'){
+    } else if (action == 'debited_from_wallet' ||
+        action == 'parcel_refund_request') {
       Get.to(() => TripDetails(tripId: tripId));
-    }else{
+    } else {
       Get.to(() => const HelpAndSupportScreen());
     }
   }
 
-  String _getNotificationButtonText(String action){
+  String _getNotificationButtonText(String action) {
     final actionMap = {
       'referral_reward_received': 'earning_history'.tr,
       'debited_from_wallet': 'parcel_details'.tr,
@@ -218,9 +311,27 @@ class NotificationCardWidget extends StatelessWidget {
 
     return actionMap[action] ?? '';
   }
+
+  String _translateNotificationText(String value,
+      {required String action, required bool isTitle}) {
+    final String raw = value.trim();
+    if (raw.isEmpty) return raw;
+    final String translated = DynamicTranslationHelper.translate(raw);
+    if (translated != raw) {
+      return translated;
+    }
+    if (action.trim().isNotEmpty) {
+      final String actionTranslated =
+          DynamicTranslationHelper.translate(action);
+      if (actionTranslated != action) {
+        return actionTranslated;
+      }
+    }
+    return raw;
+  }
 }
 
-String _getIcons(String notificationType){
+String _getIcons(String notificationType) {
   switch (notificationType) {
     case 'trip':
       return Images.notificationTripIcon;
@@ -258,11 +369,9 @@ String _getIcons(String notificationType){
     default:
       return Images.notificationOthersIcon;
   }
-
 }
 
-
-int calculateMinute(String isoDateTime){
+int calculateMinute(String isoDateTime) {
   DateTime dateTime = DateConverter.isoStringToLocalDate(isoDateTime);
   return DateTime.now().difference(dateTime).inMinutes;
 }

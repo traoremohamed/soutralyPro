@@ -15,6 +15,8 @@ abstract class ProfileServiceInterface {
       List<MultipartBody> images, List<MultipartDocument> files);
   Future<dynamic> getDriverPricingOptions();
   Future<dynamic> selectDriverPricingMode(Map<String, dynamic> body);
+  Future<dynamic> getDriverBrandingOptions();
+  Future<dynamic> subscribeDriverBranding(Map<String, dynamic> body);
   Future<dynamic> updateProfileInfo(
       String firstName,
       String lastname,

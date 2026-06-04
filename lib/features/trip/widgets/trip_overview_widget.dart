@@ -75,6 +75,8 @@ class TripOverviewWidget extends StatelessWidget {
                         .map((item) => CustomDropdownMenuItem<String>(
                             value: item,
                             child: Text(item.tr,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: textRegular.copyWith(
                                   fontSize: Dimensions.fontSizeSmall,
                                   color: tripController.selectedOverview == item
@@ -142,9 +144,12 @@ class ReportsItemCard extends StatelessWidget {
         ),
         child:
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(title!.tr,
-              style: textRegular.copyWith(
-                  color: Theme.of(context).textTheme.bodyMedium!.color)),
+          Flexible(
+            child: Text(title!.tr,
+                overflow: TextOverflow.ellipsis,
+                style: textRegular.copyWith(
+                    color: Theme.of(context).textTheme.bodyMedium!.color)),
+          ),
           isTotal
               ? Text(PriceConverter.convertPrice(context, amount!),
                   style: textRobotoMedium.copyWith(

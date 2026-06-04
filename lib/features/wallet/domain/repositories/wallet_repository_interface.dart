@@ -23,4 +23,13 @@ abstract class WalletRepositoryInterface implements RepositoryInterface {
   Future<dynamic> getPaymentGetWayList();
   Future<Response?> mockRecharge(String userId, String amount,
       {String? waveNumber});
+  Future<Response?> createWaveCheckoutSession(String userId, String amount,
+      {String currency, String? successUrl, String? errorUrl});
+  Future<Response?> initiatePaymentSession(
+      String userId, String amount, String paymentMethod,
+      {String? paymentNumber,
+      String currency,
+      String? successUrl,
+      String? errorUrl,
+      String? cancelUrl});
 }

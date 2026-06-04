@@ -1138,10 +1138,10 @@ packages:
     source: hosted
     version: "0.5.0"
   open_file_plus:
-    dependency: "direct overridden"
+    dependency: "direct main"
     description:
       path: "."
-      ref: main
+      ref: b29351
       resolved-ref: b29351d11174869ebe0d7a5401ecad0a2300a63b
       url: "https://github.com/postflow/open_file_plus.git"
     source: git

@@ -117,8 +117,8 @@ class AuthService implements AuthServiceInterface {
   }
 
   @override
-  Future sendOtp({required String phone}) {
-    return authRepositoryInterface.sendOtp(phone: phone);
+  Future sendOtp({required String phone, String? fcmToken}) {
+    return authRepositoryInterface.sendOtp(phone: phone, fcmToken: fcmToken);
   }
 
   @override

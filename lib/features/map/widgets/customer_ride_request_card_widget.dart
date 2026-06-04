@@ -332,6 +332,11 @@ class CustomerRideRequestCardWidget extends StatelessWidget {
                                         buttonText: 'accept'.tr,
                                         radius: Dimensions.paddingSizeSmall,
                                         onPressed: () async {
+                                          if (!rideController
+                                              .canAcceptTripWithWalletGuard(
+                                                  rideRequest)) {
+                                            return;
+                                          }
                                           rideController
                                               .tripAcceptOrRejected(
                                             rideRequest.id!,
@@ -566,6 +571,11 @@ class CustomerRideRequestCardWidget extends StatelessWidget {
                                       buttonText: 'accept'.tr,
                                       radius: Dimensions.paddingSizeSmall,
                                       onPressed: () async {
+                                        if (!Get.find<RideController>()
+                                            .canAcceptTripWithWalletGuard(
+                                                rideRequest)) {
+                                          return;
+                                        }
                                         Get.find<RideController>()
                                             .tripAcceptOrRejected(
                                                 rideRequest.id!,
@@ -877,7 +887,9 @@ class _CommonDesignPart extends StatelessWidget {
         CustomerInfoWidget(
           fromTripDetails: false,
           customer: rideRequest.customer!,
-          fare: rideRequest.estimatedFare!,
+          fare: Get.find<RideController>()
+              .getDisplayFareFromTripDetail(rideRequest)
+              .toString(),
           customerRating: rideRequest.customerAvgRating!,
         ),
       Get.find<RideController>().matchedMode != null

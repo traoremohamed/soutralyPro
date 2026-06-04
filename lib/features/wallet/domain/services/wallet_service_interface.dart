@@ -20,4 +20,13 @@ abstract class WalletServiceInterface {
   Future<dynamic> getPaymentGetWayList();
   Future<dynamic> mockRecharge(String userId, String amount,
       {String? waveNumber});
+  Future<dynamic> createWaveCheckoutSession(String userId, String amount,
+      {String currency, String? successUrl, String? errorUrl});
+  Future<dynamic> initiatePaymentSession(
+      String userId, String amount, String paymentMethod,
+      {String? paymentNumber,
+      String currency,
+      String? successUrl,
+      String? errorUrl,
+      String? cancelUrl});
 }

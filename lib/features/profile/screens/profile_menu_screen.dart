@@ -10,7 +10,6 @@ import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
 import 'package:ride_sharing_user_app/features/chat/screens/chat_screen.dart';
 import 'package:ride_sharing_user_app/features/help_and_support/screens/help_and_support_screen.dart';
-import 'package:ride_sharing_user_app/features/leaderboard/screens/leaderboard_screen.dart';
 import 'package:ride_sharing_user_app/features/profile/screens/profile_screen.dart';
 import 'package:ride_sharing_user_app/features/profile/widgets/profile_level_widget.dart';
 import 'package:ride_sharing_user_app/features/review/screens/review_screen.dart';
@@ -61,11 +60,11 @@ class _ProfileMenuScreenState extends State<ProfileMenuScreen> {
             icon: Images.privacyPolicy,
             onTap: () => Get.to(() => const SafetySetupScreen()),
           ),
-          ProfileMenuItem(
-            icon: Images.leaderBoardIcon,
-            title: 'leader_board',
-            onTap: () => Get.to(() => const LeaderboardScreen()),
-          ),
+          // ProfileMenuItem(
+          //   icon: Images.leaderBoardIcon,
+          //   title: 'leader_board',
+          //   onTap: () => Get.to(() => const LeaderboardScreen()),
+          // ),
           if ((Get.find<SplashController>().config?.referralEarningStatus ??
                   false) ||
               ((Get.find<ProfileController>()

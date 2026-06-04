@@ -17,104 +17,160 @@ class CashInHandWarningWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: Get.height * 0.1, right: 0, left: 0,
+      bottom: Get.height * 0.1,
+      right: 0,
+      left: 0,
       child: Container(
         decoration: BoxDecoration(
             color: context.customThemeColors.warningBackGroundColor,
-            borderRadius: BorderRadius.circular(Dimensions.paddingSizeSmall)
-        ),
+            borderRadius: BorderRadius.circular(Dimensions.paddingSizeSmall)),
         padding: EdgeInsets.all(Dimensions.paddingSizeDefault),
         margin: EdgeInsets.all(Dimensions.paddingSizeDefault),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if(Get.find<ProfileController>().isCashInHandHoldAccount)...[
+          if (Get.find<ProfileController>().isCashInHandHoldAccount) ...[
             Row(children: [
-              Icon(Icons.warning, color: Theme.of(context).colorScheme.error.withValues(alpha: 0.9), size: 18),
+              Icon(Icons.warning,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .error
+                      .withValues(alpha: 0.9),
+                  size: 18),
               const SizedBox(width: Dimensions.paddingSizeSmall),
-
-              Text('your_account_is_on_hold'.tr, style: textBold.copyWith(fontSize: Dimensions.fontSizeSmall, color: Theme.of(context).colorScheme.error.withValues(alpha: 0.9))),
-
+              Text('your_account_is_on_hold'.tr,
+                  style: textBold.copyWith(
+                      fontSize: Dimensions.fontSizeSmall,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .error
+                          .withValues(alpha: 0.9))),
               const Spacer(),
-
               InkWell(
-                onTap: ()=> Get.find<ProfileController>().removeCashInHandWarnings(),
+                onTap: () =>
+                    Get.find<ProfileController>().removeCashInHandWarnings(),
                 child: Container(
-                  height: 16, width: 16,
+                  height: 16,
+                  width: 16,
                   decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
-                      shape: BoxShape.circle
-                  ),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .error
+                          .withValues(alpha: 0.1),
+                      shape: BoxShape.circle),
                   padding: EdgeInsets.all(4),
-                  child: Image.asset(Images.crossIcon, color: Theme.of(context).hintColor.withValues(alpha: 0.7)),
+                  child: Image.asset(Images.crossIcon,
+                      color:
+                          Theme.of(context).hintColor.withValues(alpha: 0.7)),
                 ),
               )
             ]),
             const SizedBox(height: Dimensions.paddingSizeSmall),
-
-            RichText(text: TextSpan(
+            RichText(
+                text: TextSpan(
               text: '${'your_account_is_on_hold_for_exceeding'.tr} ',
-              style: textRegular.copyWith(fontSize: Dimensions.fontSizeSmall,color: Theme.of(context).textTheme.bodyMedium!.color),
+              style: textRegular.copyWith(
+                  fontSize: Dimensions.fontSizeSmall,
+                  color: Theme.of(context).textTheme.bodyMedium!.color),
               children: [
                 TextSpan(
-                    recognizer: TapGestureRecognizer()..onTap = (){
-                      double payableBalance = (Get.find<ProfileController>().profileInfo!.wallet!.payableBalance! - Get.find<ProfileController>().profileInfo!.wallet!.receivableBalance!);
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () {
+                        double payableBalance = (Get.find<ProfileController>()
+                                .profileInfo!
+                                .wallet!
+                                .payableBalance! -
+                            Get.find<ProfileController>()
+                                .profileInfo!
+                                .wallet!
+                                .receivableBalance!);
 
-                      if(payableBalance >= (Get.find<SplashController>().config?.cashInHandMinAmountToPay ?? 0)){
-                        Get.bottomSheet(PaymentMethodBottomsheetWidget(payableBalance: payableBalance), isScrollControlled: true);
-                      }else{
-                        showCustomSnackBar('${'minimum_payment_amount'.tr} ${PriceConverter.convertPrice(context, (Get.find<SplashController>().config?.cashInHandMinAmountToPay ?? 0))}');
-                      }
-                    },
-                    text: 'pay_now'.tr, style: textRegular.copyWith(
-                  fontSize: Dimensions.fontSizeSmall,
-                  color: Theme.of(context).colorScheme.surfaceContainer,
-                  decoration: TextDecoration.underline,
-                )),
+                        if (payableBalance >=
+                            (Get.find<SplashController>()
+                                    .config
+                                    ?.cashInHandMinAmountToPay ??
+                                0)) {
+                          Get.bottomSheet(
+                              PaymentMethodBottomsheetWidget(
+                                  payableBalance: payableBalance),
+                              isScrollControlled: true);
+                        } else {
+                          showCustomSnackBar(
+                              '${'minimum_payment_amount'.tr} ${PriceConverter.convertPayablePrice(context, (Get.find<SplashController>().config?.cashInHandMinAmountToPay ?? 0))}');
+                        }
+                      },
+                    text: 'pay_now'.tr,
+                    style: textRegular.copyWith(
+                      fontSize: Dimensions.fontSizeSmall,
+                      color: Theme.of(context).colorScheme.surfaceContainer,
+                      decoration: TextDecoration.underline,
+                    )),
               ],
             ))
-          ]
-          else...[
+          ] else ...[
             Row(children: [
               Container(
-                height: 16, width: 16,
+                height: 16,
+                width: 16,
                 decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.error.withValues(alpha: 0.5),
-                    shape: BoxShape.circle
-                ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .error
+                        .withValues(alpha: 0.5),
+                    shape: BoxShape.circle),
                 padding: EdgeInsets.all(Dimensions.paddingSizeTiny),
                 child: Container(
                   decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.error,
-                      shape: BoxShape.circle
-                  ),
+                      shape: BoxShape.circle),
                   padding: EdgeInsets.all(Dimensions.paddingSizeTiny),
-                  child: Image.asset(Images.crossIcon, color: Theme.of(context).cardColor.withValues(alpha: 0.7)),
+                  child: Image.asset(Images.crossIcon,
+                      color:
+                          Theme.of(context).cardColor.withValues(alpha: 0.7)),
                 ),
               ),
               const SizedBox(width: Dimensions.paddingSizeSmall),
-
-              Text('${'attention_please'.tr} !', style: textBold.copyWith(fontSize: Dimensions.fontSizeSmall))
+              Text('${'attention_please'.tr} !',
+                  style: textBold.copyWith(fontSize: Dimensions.fontSizeSmall))
             ]),
             const SizedBox(height: Dimensions.paddingSizeSmall),
-
-            RichText(text: TextSpan(
+            RichText(
+                text: TextSpan(
               text: '${'looks_like_your_limit_to_hold_cash_will_be'.tr} ',
-              style: textRegular.copyWith(fontSize: Dimensions.fontSizeSmall,color: Theme.of(context).textTheme.bodyMedium!.color),
+              style: textRegular.copyWith(
+                  fontSize: Dimensions.fontSizeSmall,
+                  color: Theme.of(context).textTheme.bodyMedium!.color),
               children: [
                 TextSpan(
-                    recognizer: TapGestureRecognizer()..onTap = (){
-                      double payableBalance = (Get.find<ProfileController>().profileInfo!.wallet!.payableBalance! - Get.find<ProfileController>().profileInfo!.wallet!.receivableBalance!);
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () {
+                        double payableBalance = (Get.find<ProfileController>()
+                                .profileInfo!
+                                .wallet!
+                                .payableBalance! -
+                            Get.find<ProfileController>()
+                                .profileInfo!
+                                .wallet!
+                                .receivableBalance!);
 
-                      if(payableBalance >= (Get.find<SplashController>().config?.cashInHandMinAmountToPay ?? 0)){
-                        Get.bottomSheet(PaymentMethodBottomsheetWidget(payableBalance: payableBalance), isScrollControlled: true);
-                      }else{
-                        showCustomSnackBar('${'minimum_payment_amount'.tr} ${PriceConverter.convertPrice(context, (Get.find<SplashController>().config?.cashInHandMinAmountToPay ?? 0))}');
-                      }
-                    },
-                    text: 'pay_now'.tr, style: textRegular.copyWith(
-                  fontSize: Dimensions.fontSizeSmall,
-                  color: Theme.of(context).colorScheme.surfaceContainer,
-                  decoration: TextDecoration.underline,
-                )),
+                        if (payableBalance >=
+                            (Get.find<SplashController>()
+                                    .config
+                                    ?.cashInHandMinAmountToPay ??
+                                0)) {
+                          Get.bottomSheet(
+                              PaymentMethodBottomsheetWidget(
+                                  payableBalance: payableBalance),
+                              isScrollControlled: true);
+                        } else {
+                          showCustomSnackBar(
+                              '${'minimum_payment_amount'.tr} ${PriceConverter.convertPayablePrice(context, (Get.find<SplashController>().config?.cashInHandMinAmountToPay ?? 0))}');
+                        }
+                      },
+                    text: 'pay_now'.tr,
+                    style: textRegular.copyWith(
+                      fontSize: Dimensions.fontSizeSmall,
+                      color: Theme.of(context).colorScheme.surfaceContainer,
+                      decoration: TextDecoration.underline,
+                    )),
               ],
             ))
           ]

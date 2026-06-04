@@ -16,6 +16,8 @@ class RechargeBottomSheetWidget extends StatefulWidget {
 
 class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
   bool isForfait = true;
+  static const Color _dominantBlack = Color(0xFF111111);
+  static const Color _dominantOrange = Color(0xFFFF7A00);
   // when forfait: select specific categories and number of days
   Set<String> selectedCategoryIds = {};
   String? selectedPlanKey;
@@ -61,25 +63,46 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Souscription wallet', style: textBold.copyWith(fontSize: 16)),
+          Text(
+            'Souscription wallet',
+            style: textBold.copyWith(fontSize: 16, color: _dominantBlack),
+          ),
           const SizedBox(height: Dimensions.paddingSizeSmall),
           Row(children: [
             Expanded(
                 child: ListTile(
-              title: Text('forfait'.tr),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'forfait'.tr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: textBold.copyWith(color: _dominantBlack),
+              ),
               leading: Radio<bool>(
                   value: true,
                   groupValue: isForfait,
+                  activeColor: _dominantOrange,
                   onChanged: (v) {
                     setState(() => isForfait = true);
                   }),
             )),
             Expanded(
                 child: ListTile(
-              title: Text('commission'.tr),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'commission'.tr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: textBold.copyWith(color: _dominantBlack),
+              ),
               leading: Radio<bool>(
                   value: false,
                   groupValue: isForfait,
+                  activeColor: _dominantOrange,
                   onChanged: (v) {
                     setState(() => isForfait = false);
                   }),
@@ -91,7 +114,10 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
             Row(children: [
               Expanded(
                 child: InputDecorator(
-                  decoration: InputDecoration(labelText: 'plan'.tr),
+                  decoration: InputDecoration(
+                    labelText: 'plan'.tr,
+                    labelStyle: textRegular.copyWith(color: _dominantBlack),
+                  ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String?>(
                       isExpanded: true,
@@ -105,10 +131,11 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
                         const DropdownMenuItem(
                             value: 'eco', child: Text('Gbonhi')),
                         DropdownMenuItem(
-                            value: 'eco_confort', child: Text('Choco')),
+                            value: 'eco_confort',
+                            child: Text('Gbonhi + Choco')),
                         const DropdownMenuItem(
                             value: 'eco_confort_premium',
-                            child: Text('Fariman')),
+                            child: Text('Gbonhi + Choco + Fariman')),
                       ],
                       onChanged: (val) {
                         setState(() {
@@ -154,10 +181,10 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
                     ),
                   ),
                   child: Text(
-                    '${cat.name ?? ''} (${(cat.montant ?? 0).toStringAsFixed(0)})',
+                    cat.name ?? '',
                     style: textRegular.copyWith(
                       color: isSelected
-                          ? Theme.of(context).primaryColor
+                          ? _dominantBlack
                           : Theme.of(context).textTheme.bodyMedium?.color,
                     ),
                   ),
@@ -169,7 +196,10 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
               Expanded(
                 child: TextField(
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: 'days'.tr),
+                  decoration: InputDecoration(
+                    labelText: 'days'.tr,
+                    labelStyle: textRegular.copyWith(color: _dominantBlack),
+                  ),
                   controller: daysController,
                   onChanged: (v) {
                     setState(() => days = int.tryParse(v) ?? 1);
@@ -187,98 +217,125 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
               ),
               child: Text(
                 'En mode commission, la commission sera deduite du wallet a chaque course (si aucun forfait actif).',
-                style: textRegular,
+                style: textRegular.copyWith(color: _dominantBlack),
               ),
             ),
           ],
           const SizedBox(height: Dimensions.paddingSizeSmall),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('${'total'.tr}:', style: textBold),
-            Text(PriceConverter.convertPrice(context, computedAmount),
-                style: textBold),
+            Text('${'total'.tr}:',
+                style: textBold.copyWith(color: _dominantBlack)),
+            Text(PriceConverter.convertPayablePrice(context, computedAmount),
+                style: textBold.copyWith(color: _dominantBlack)),
           ]),
           const SizedBox(height: Dimensions.paddingSizeSmall),
           SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                  onPressed: () async {
-                    if (isForfait) {
-                      if (selectedCategoryIds.isEmpty) {
-                        Get.snackbar(
-                            '', 'Veuillez selectionnez le type de forfait',
-                            backgroundColor: Colors.red,
-                            colorText: Colors.white);
-                        return;
-                      }
-                      final int useDays = days < 1 ? 1 : days;
-                      final double requiredAmount =
-                          sumSelectedCategoriesMontant() * useDays;
-                      final double walletBalance =
-                          profile.profileInfo?.wallet?.walletBalance ?? 0;
-                      if (walletBalance < requiredAmount) {
-                        showCustomSnackBar('Solde wallet insuffisant');
-                        return;
-                      }
-                      final bool subscriptionSucceeded =
-                          await profile.purchaseForfaitWithCategories(
-                              selectedCategoryIds.toList(),
-                              days: useDays);
-                      if (!subscriptionSucceeded) {
-                        return;
-                      }
-                      Navigator.of(context).pop();
-                      // show receipt / confirmation using updated profile values
-                      final double amountPaid =
-                          sumSelectedCategoriesMontant() * useDays;
-                      final List<String> categoryNames = profile.categoryList
-                          .where((c) =>
-                              c.id != null &&
-                              selectedCategoryIds.contains(c.id))
-                          .map((c) => c.name ?? '')
-                          .toList();
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _dominantOrange,
+                    foregroundColor: _dominantBlack,
+                    disabledBackgroundColor: const Color(0xFFFFB067),
+                    disabledForegroundColor: const Color(0xFF3A2A1C),
+                  ),
+                  onPressed: profile.pricingModeUpdating
+                      ? null
+                      : () async {
+                          if (isForfait) {
+                            if (selectedCategoryIds.isEmpty) {
+                              Get.snackbar('',
+                                  'Veuillez selectionnez le type de forfait',
+                                  backgroundColor: Colors.red,
+                                  colorText: Colors.white);
+                              return;
+                            }
+                            final int useDays = days < 1 ? 1 : days;
+                            final double requiredAmount =
+                                sumSelectedCategoriesMontant() * useDays;
+                            final double walletBalance =
+                                profile.profileInfo?.wallet?.walletBalance ?? 0;
+                            if (walletBalance < requiredAmount) {
+                              showCustomSnackBar('Solde wallet insuffisant');
+                              return;
+                            }
+                            final bool subscriptionSucceeded =
+                                await profile.purchaseForfaitWithCategories(
+                                    selectedCategoryIds.toList(),
+                                    days: useDays);
+                            if (!subscriptionSucceeded) {
+                              return;
+                            }
+                            Navigator.of(context).pop();
+                            // show receipt / confirmation using updated profile values
+                            final double amountPaid =
+                                sumSelectedCategoriesMontant() * useDays;
+                            final List<String> categoryNames = profile
+                                .categoryList
+                                .where((c) =>
+                                    c.id != null &&
+                                    selectedCategoryIds.contains(c.id))
+                                .map((c) => c.name ?? '')
+                                .toList();
 
-                      Get.dialog(AlertDialog(
-                        title: Text('receipt'.tr),
-                        content:
-                            Column(mainAxisSize: MainAxisSize.min, children: [
-                          Row(children: [
-                            Text('${'total'.tr}: '),
-                            Text(PriceConverter.convertPrice(
-                                context, amountPaid))
-                          ]),
-                          Row(children: [
-                            Text('${'days'.tr}: '),
-                            Text('$useDays')
-                          ]),
-                          const SizedBox(height: 8),
-                          Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text('${'categories'.tr}:')),
-                          ...categoryNames.map((n) => Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(' - $n'))),
-                          const SizedBox(height: 8),
-                          if (profile.forfaitExpiresAt != null)
-                            Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                    '${'expires_at'.tr}: ${profile.forfaitExpiresAt}')),
-                        ]),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Get.back(), child: Text('ok'.tr))
-                        ],
-                      ));
-                    } else {
-                      await profile.selectCommissionMode();
-                      if (profile.driverPricingMode == 'commission') {
-                        Get.back();
-                        Get.snackbar('success'.tr, 'Mode commission active');
-                      }
-                    }
-                  },
-                  child: Text(
-                      isForfait ? 'Souscrire forfait' : 'Activer commission'))),
+                            Get.dialog(AlertDialog(
+                              title: Text('receipt'.tr),
+                              content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(children: [
+                                      Text('${'total'.tr}: '),
+                                      Text(PriceConverter.convertPayablePrice(
+                                          context, amountPaid))
+                                    ]),
+                                    Row(children: [
+                                      Text('${'days'.tr}: '),
+                                      Text('$useDays')
+                                    ]),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text('${'categories'.tr}:')),
+                                    ...categoryNames.map((n) => Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(' - $n'))),
+                                    const SizedBox(height: 8),
+                                    if (profile.forfaitExpiresAt != null)
+                                      Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                              '${'expires_at'.tr}: ${profile.forfaitExpiresAt}')),
+                                  ]),
+                              actions: [
+                                TextButton(
+                                    onPressed: () => Get.back(),
+                                    child: Text('ok'.tr))
+                              ],
+                            ));
+                          } else {
+                            await profile.selectCommissionMode();
+                            if (profile.driverPricingMode == 'commission') {
+                              Get.back();
+                              Get.snackbar(
+                                  'success'.tr, 'Mode commission active');
+                            }
+                          }
+                        },
+                  child: profile.pricingModeUpdating
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: _dominantBlack),
+                        )
+                      : Text(
+                          isForfait
+                              ? 'subscribe_package'.tr
+                              : 'activate_commission_mode'.tr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                          style: textBold.copyWith(color: _dominantBlack),
+                        ))),
           const SizedBox(height: Dimensions.paddingSizeSmall),
         ]),
       ),

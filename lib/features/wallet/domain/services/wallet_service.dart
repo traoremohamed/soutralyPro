@@ -96,4 +96,31 @@ class WalletService implements WalletServiceInterface {
     return walletRepositoryInterface.mockRecharge(userId, amount,
         waveNumber: waveNumber);
   }
+
+  @override
+  Future createWaveCheckoutSession(String userId, String amount,
+      {String currency = 'XOF', String? successUrl, String? errorUrl}) {
+    return walletRepositoryInterface.createWaveCheckoutSession(userId, amount,
+        currency: currency, successUrl: successUrl, errorUrl: errorUrl);
+  }
+
+  @override
+  Future initiatePaymentSession(
+      String userId, String amount, String paymentMethod,
+      {String? paymentNumber,
+      String currency = 'XOF',
+      String? successUrl,
+      String? errorUrl,
+      String? cancelUrl}) {
+    return walletRepositoryInterface.initiatePaymentSession(
+      userId,
+      amount,
+      paymentMethod,
+      paymentNumber: paymentNumber,
+      currency: currency,
+      successUrl: successUrl,
+      errorUrl: errorUrl,
+      cancelUrl: cancelUrl,
+    );
+  }
 }

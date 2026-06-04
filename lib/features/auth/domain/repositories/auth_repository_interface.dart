@@ -12,7 +12,7 @@ abstract class AuthRepositoryInterface implements RepositoryInterface {
       XFile? profileImage,
       List<MultipartBody>? identityImage,
       List<MultipartDocument>? documents});
-  Future<Response?> sendOtp({required String phone});
+  Future<Response?> sendOtp({required String phone, String? fcmToken});
   Future<Response?> verifyOtp({required String phone, required String otp});
   Future<dynamic> verifyFirebaseOtp(
       {required String phone, required String otp, required String session});

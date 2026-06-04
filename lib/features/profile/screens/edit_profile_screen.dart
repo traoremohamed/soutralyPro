@@ -53,14 +53,10 @@ class ProfileEditScreenState extends State<ProfileEditScreen>
     emailController.text = widget.profileInfo?.email ?? '';
     identityNumberController.text =
         widget.profileInfo?.identificationNumber ?? '';
-    if (widget.profileInfo?.details?.services != null) {
-      if (widget.profileInfo?.details?.services?.length == 1) {
-        if (widget.profileInfo?.details?.services![0] == 'ride_request') {
-          isParcelDelivery = false;
-        } else {
-          isRideShare = false;
-        }
-      }
+    final services = widget.profileInfo?.details?.services;
+    if (services != null) {
+      isRideShare = services.contains('ride_request');
+      isParcelDelivery = services.contains('parcel');
     }
     Get.find<AuthController>()
         .setIdentityType(widget.profileInfo?.identificationType ?? '');
@@ -262,27 +258,19 @@ class ProfileEditScreenState extends State<ProfileEditScreen>
                         inputAction: TextInputAction.next,
                         isEnabled: false,
                       ),
-                      Row(children: [
-                        TextFieldTitleWidget(title: 'phone'.tr),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(10, 17, 0, 8),
-                          child: Icon(Icons.warning,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primaryContainer,
-                              size: 12),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(5, 17, 0, 8),
-                          child: Text(
-                            "phone_number_isn't_editable".tr,
-                            style: textRegular.copyWith(
-                              color: Theme.of(context).hintColor,
-                              fontSize: Dimensions.fontSizeSmall,
-                            ),
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            top: Dimensions.paddingSizeSmall),
+                        child: Text(
+                          "phone_number_isn't_editable".tr,
+                          style: textRegular.copyWith(
+                            color: Theme.of(context).hintColor,
+                            fontSize: Dimensions.fontSizeSmall,
+                            fontStyle: FontStyle.italic,
                           ),
-                        )
-                      ]),
+                        ),
+                      ),
+                      TextFieldTitleWidget(title: 'phone'.tr),
                       TextFieldWidget(
                         borderRadius: 50,
                         hintText: 'phone',

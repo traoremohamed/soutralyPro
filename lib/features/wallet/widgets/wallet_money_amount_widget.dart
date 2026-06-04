@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/features/wallet/widgets/payment_method_bottomsheet_widget.dart';
 import 'package:ride_sharing_user_app/features/wallet/widgets/point_to_wallet_money_widget.dart';
+import 'package:ride_sharing_user_app/helper/date_converter.dart';
 import 'package:ride_sharing_user_app/helper/display_helper.dart';
 import 'package:ride_sharing_user_app/helper/price_converter.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
@@ -16,36 +17,61 @@ import 'package:ride_sharing_user_app/features/wallet/screens/wave_recharge_page
 import 'package:ride_sharing_user_app/features/wallet/screens/digital_payment_screen.dart';
 
 class WalletMoneyAmountWidget extends StatelessWidget {
+  final VoidCallback? onWithdrawableBalanceTap;
   const WalletMoneyAmountWidget({
     super.key,
+    this.onWithdrawableBalanceTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GetBuilder<WalletController>(builder: (walletController) {
       return GetBuilder<ProfileController>(builder: (profileController) {
-        double receivableBalance = _calculateReceivableBalanceBalance(
-          profileController.profileInfo?.wallet?.receivableBalance ?? 0,
-          profileController.profileInfo?.wallet?.payableBalance ?? 0,
-        );
-        double payableBalance =
-            (profileController.profileInfo?.wallet?.payableBalance ?? 0) -
-                (profileController.profileInfo?.wallet?.receivableBalance ?? 0);
         final double walletBalance =
             profileController.profileInfo?.wallet?.walletBalance ?? 0;
+        final double minimumWithdrawAmount =
+            (Get.find<SplashController>().config?.cashInHandMinAmountToPay ?? 0)
+                .toDouble();
+        final bool canRequestWithdraw = walletBalance >= minimumWithdrawAmount;
         final bool canSubscribe = walletBalance > 0;
+        final bool canSubmitSubscription =
+            canSubscribe && !profileController.pricingModeUpdating;
         final double shownAmount = walletController.walletTypeIndex == 0
-            ? (receivableBalance > 0
-                ? receivableBalance
-                : (payableBalance > 0 ? payableBalance : walletBalance))
+            ? walletBalance
             : (profileController.profileInfo?.loyaltyPoint?.toDouble() ?? 0);
         final DateTime? forfaitExpiryDate =
             DateTime.tryParse(profileController.forfaitExpiresAt ?? '')
                 ?.toLocal();
+        final bool isForfaitActive = walletController.walletTypeIndex == 0 &&
+            profileController.driverPricingMode == 'forfait' &&
+            forfaitExpiryDate != null &&
+            forfaitExpiryDate.isAfter(DateTime.now());
         final bool isForfaitExpiringSoon = forfaitExpiryDate != null &&
             forfaitExpiryDate.difference(DateTime.now()).inMinutes <= 180;
+        final Color panelBackgroundColor =
+            isForfaitActive ? const Color(0xFFEAF6FF) : const Color(0xFFFFF4E8);
+        final Color panelBorderColor = isForfaitActive
+            ? const Color(0xFF90CAF9)
+            : const Color(0xFFFFA75C).withValues(alpha: 0.45);
+        final Color titleColor = isForfaitActive
+            ? const Color(0xFF0B3C6F)
+            : canRequestWithdraw
+                ? const Color(0xFFB24D00)
+                : Theme.of(context).textTheme.bodyMedium!.color ??
+                    const Color(0xFF212121);
+        final Color subtitleColor = isForfaitActive
+            ? const Color(0xFF124A88)
+            : canRequestWithdraw
+                ? const Color(0xFF7A3A08)
+                : Theme.of(context)
+                        .textTheme
+                        .bodyMedium!
+                        .color
+                        ?.withValues(alpha: 0.9) ??
+                    const Color(0xFF424242);
         final String formattedForfaitExpiry = forfaitExpiryDate != null
-            ? _formatFrenchDateTime(forfaitExpiryDate)
+            ? DateConverter.toFrenchDateTime(
+                forfaitExpiryDate.toIso8601String())
             : (profileController.forfaitExpiresAt ?? '');
         return Padding(
           padding: const EdgeInsets.fromLTRB(
@@ -71,7 +97,10 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                         'point_conversion_is_currently_unavailable'.tr);
                   }
                 } else if (walletController.walletTypeIndex == 0) {
-                  if (receivableBalance > 0) {
+                  if (canRequestWithdraw) {
+                    if (onWithdrawableBalanceTap != null) {
+                      onWithdrawableBalanceTap!();
+                    }
                     showModalBottomSheet(
                       backgroundColor: Colors.transparent,
                       isScrollControlled: true,
@@ -79,26 +108,16 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                       builder: (_) => const WithdrawRequestWidget(),
                     );
                   } else {
-                    if (payableBalance >=
-                        (Get.find<SplashController>()
-                                .config
-                                ?.cashInHandMinAmountToPay ??
-                            0)) {
-                      Get.bottomSheet(
-                          PaymentMethodBottomsheetWidget(
-                              payableBalance: payableBalance),
-                          isScrollControlled: true);
-                    } else {
-                      showCustomSnackBar(
-                          '${'minimum_payment_amount'.tr} ${PriceConverter.convertPrice(context, (Get.find<SplashController>().config?.cashInHandMinAmountToPay ?? 0))}');
-                    }
+                    showCustomSnackBar(
+                        '${'minimum_payment_amount'.tr} ${PriceConverter.convertPayablePrice(context, minimumWithdrawAmount)}');
                   }
                 }
               },
               child: Container(
                 width: Get.width,
                 decoration: BoxDecoration(
-                    color: Theme.of(context).hintColor.withValues(alpha: 0.15),
+                    color: panelBackgroundColor,
+                    border: Border.all(color: panelBorderColor),
                     borderRadius:
                         BorderRadius.circular(Dimensions.paddingSizeSmall)),
                 padding: const EdgeInsets.all(Dimensions.paddingSizeSmall),
@@ -107,34 +126,21 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                     children: [
                       Text(
                         walletController.walletTypeIndex == 0
-                            ? receivableBalance > 0
+                            ? canRequestWithdraw
                                 ? 'withdraw_able_balance'.tr
                                 : 'wallet_money'.tr
                             : 'convert_able_point'.tr,
                         style: textBold.copyWith(
                             fontSize: Dimensions.fontSizeLarge,
-                            color: Get.isDarkMode
-                                ? Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium!
-                                    .color!
-                                    .withValues(alpha: 0.9)
-                                : null),
+                            color: titleColor),
                       ),
                       Text(
                         walletController.walletTypeIndex == 0
-                            ? receivableBalance > 0
+                            ? canRequestWithdraw
                                 ? 'you_can_send_withdraw_request'.tr
                                 : ''
                             : 'convert_loyalty_point_to_wallet'.tr,
-                        style: textRegular.copyWith(
-                            color: Get.isDarkMode
-                                ? Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium!
-                                    .color!
-                                    .withValues(alpha: 0.8)
-                                : null),
+                        style: textRegular.copyWith(color: subtitleColor),
                       ),
                       if (walletController.walletTypeIndex == 0 &&
                           profileController.driverPricingMode == 'forfait' &&
@@ -148,17 +154,15 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                               vertical: Dimensions.paddingSizeExtraSmall,
                             ),
                             decoration: BoxDecoration(
-                              color: (isForfaitExpiringSoon
-                                      ? Colors.orange
-                                      : Colors.blue)
-                                  .withValues(alpha: 0.12),
+                              color: isForfaitExpiringSoon
+                                  ? const Color(0xFFFFF1E0)
+                                  : const Color(0xFFEAF6FF),
                               borderRadius: BorderRadius.circular(
                                   Dimensions.paddingSizeExtraSmall),
                               border: Border.all(
-                                color: (isForfaitExpiringSoon
-                                        ? Colors.orange
-                                        : Colors.blue)
-                                    .withValues(alpha: 0.45),
+                                color: isForfaitExpiringSoon
+                                    ? const Color(0xFFFF9800)
+                                    : const Color(0xFF1E88E5),
                               ),
                             ),
                             child: Text(
@@ -166,8 +170,8 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                               style: textRegular.copyWith(
                                 fontSize: Dimensions.fontSizeSmall,
                                 color: isForfaitExpiringSoon
-                                    ? Colors.orange
-                                    : Colors.blue,
+                                    ? const Color(0xFFB85E00)
+                                    : const Color(0xFF0D5EA8),
                               ),
                             ),
                           ),
@@ -175,7 +179,17 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                       const SizedBox(height: Dimensions.paddingSizeSmall),
                       Container(
                         decoration: BoxDecoration(
-                            color: Theme.of(context).cardColor,
+                            color: isForfaitActive
+                                ? const Color(0xFFF4FAFF)
+                                : Colors.white,
+                            border: Border.all(
+                                color: isForfaitActive
+                                    ? const Color(0xFFB3D9FF)
+                                    : canRequestWithdraw
+                                        ? const Color(0xFFFFD7B0)
+                                        : Theme.of(context)
+                                            .hintColor
+                                            .withValues(alpha: 0.2)),
                             borderRadius: BorderRadius.circular(
                                 Dimensions.paddingSizeSmall)),
                         padding:
@@ -192,7 +206,7 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                                 Expanded(
                                   child: walletController.walletTypeIndex == 0
                                       ? Text(
-                                          PriceConverter.convertPrice(
+                                          PriceConverter.convertPayablePrice(
                                               context, shownAmount),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -224,32 +238,44 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFFFF7A00),
+                                        foregroundColor: Colors.white,
+                                        disabledBackgroundColor:
+                                            const Color(0xFFFFB067),
+                                        disabledForegroundColor: Colors.white70,
+                                      ),
                                       onPressed: () async {
                                         final result = await Get.bottomSheet(
                                           PaymentMethodBottomsheetWidget(
-                                              payableBalance: payableBalance > 0
-                                                  ? payableBalance
-                                                  : shownAmount),
+                                              payableBalance: PriceConverter
+                                                  .roundPayableAmount(
+                                                      shownAmount)),
                                           isScrollControlled: true,
                                         );
                                         if (result != null) {
+                                          if (!context.mounted) {
+                                            return;
+                                          }
                                           final gateway =
                                               (result['gateway'] ?? '')
                                                   .toString();
-                                          final amount = result['amount'] ??
-                                              (payableBalance > 0
-                                                  ? payableBalance
-                                                  : shownAmount);
-                                          if (gateway
-                                              .toLowerCase()
-                                              .contains('wave')) {
+                                          final amount =
+                                              result['amount'] ?? shownAmount;
+                                          final lowerGateway =
+                                              gateway.toLowerCase();
+                                          if (lowerGateway.contains('wave') ||
+                                              lowerGateway == 'orange_money') {
                                             await Navigator.push(
                                               context,
                                               MaterialPageRoute(
                                                   builder: (_) =>
                                                       WaveRechargePage(
-                                                          initialAmount: amount
-                                                              .toString())),
+                                                          initialAmount:
+                                                              amount.toString(),
+                                                          paymentMethod:
+                                                              lowerGateway)),
                                             );
                                           } else {
                                             Get.to(() => DigitalPaymentScreen(
@@ -266,7 +292,14 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                                       width: Dimensions.paddingSizeSmall),
                                   Expanded(
                                     child: OutlinedButton(
-                                      onPressed: canSubscribe
+                                      style: OutlinedButton.styleFrom(
+                                        backgroundColor: Colors.black,
+                                        foregroundColor: Colors.white,
+                                        disabledBackgroundColor: Colors.black38,
+                                        disabledForegroundColor: Colors.white70,
+                                        side: BorderSide.none,
+                                      ),
+                                      onPressed: canSubmitSubscription
                                           ? () {
                                               Get.bottomSheet(
                                                 const RechargeBottomSheetWidget(),
@@ -276,7 +309,16 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                                               );
                                             }
                                           : null,
-                                      child: const Text('Souscrire'),
+                                      child: profileController
+                                              .pricingModeUpdating
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : Text('subscribe'.tr),
                                     ),
                                   ),
                                 ],
@@ -290,19 +332,5 @@ class WalletMoneyAmountWidget extends StatelessWidget {
         );
       });
     });
-  }
-
-  double _calculateReceivableBalanceBalance(
-      double receivableBalance, double payableBalance) {
-    return receivableBalance - payableBalance;
-  }
-
-  String _formatFrenchDateTime(DateTime dateTime) {
-    final String day = dateTime.day.toString().padLeft(2, '0');
-    final String month = dateTime.month.toString().padLeft(2, '0');
-    final String year = dateTime.year.toString();
-    final String hour = dateTime.hour.toString().padLeft(2, '0');
-    final String minute = dateTime.minute.toString().padLeft(2, '0');
-    return '$day/$month/$year à $hour:$minute';
   }
 }

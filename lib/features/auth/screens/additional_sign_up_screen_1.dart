@@ -15,8 +15,30 @@ import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
 
-class AdditionalSignUpScreen1 extends StatelessWidget {
+class AdditionalSignUpScreen1 extends StatefulWidget {
   const AdditionalSignUpScreen1({super.key});
+
+  @override
+  State<AdditionalSignUpScreen1> createState() =>
+      _AdditionalSignUpScreen1State();
+}
+
+class _AdditionalSignUpScreen1State extends State<AdditionalSignUpScreen1> {
+  @override
+  void initState() {
+    super.initState();
+
+    final authController = Get.find<AuthController>();
+    if (authController.prefillPhone.isNotEmpty) {
+      final countryCode =
+          CountryCodeHelper.getCountryCode(authController.prefillPhone) ??
+              authController.countryDialCode;
+      authController.countryDialCode = countryCode;
+      authController.phoneController.text =
+          authController.prefillPhone.replaceAll(countryCode, '');
+      authController.clearPrefillPhone(notify: false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,15 +46,6 @@ class AdditionalSignUpScreen1 extends StatelessWidget {
       backgroundColor: Theme.of(context).cardColor,
       body:
           SafeArea(child: GetBuilder<AuthController>(builder: (authController) {
-        // Prefill phone if available from OTP flow
-        if (authController.prefillPhone.isNotEmpty) {
-          final countryCode =
-              CountryCodeHelper.getCountryCode(authController.prefillPhone) ??
-                  authController.countryDialCode;
-          authController.countryDialCode = countryCode;
-          authController.phoneController.text =
-              authController.prefillPhone.replaceAll(countryCode, '');
-        }
         return Column(children: [
           const SignUpAppbarWidget(
               title: 'signup_as_a_driver',

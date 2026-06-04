@@ -7,8 +7,6 @@ import 'package:ride_sharing_user_app/features/refer_and_earn/controllers/refer_
 import 'package:ride_sharing_user_app/features/refer_and_earn/widgets/referral_earn_bottomsheet_widget.dart';
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/helper/display_helper.dart';
-import 'package:ride_sharing_user_app/helper/price_converter.dart';
-import 'package:ride_sharing_user_app/util/app_constants.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
@@ -292,7 +290,7 @@ class ReferralDetailsScreen extends StatelessWidget {
                               'Rejoignez-moi sur $businessName, l\'application de transport idéale !\n\n'
                               'Utilisez mon code de parrainage lors de votre inscription :\n'
                               '🎁 "$referralCode"\n\n'
-                              'Parrainez un chauffeur et recevez chacun 5000F CFA lorsque le chauffeur parrainé réalise 15 trajets* dans les 7 jours suivant son 1er trajet.\n\n'
+                              'Parrainez un chauffeur et recevez chacun 5000 FCFA lorsque le chauffeur parrainé réalise 15 trajets* dans les 7 jours suivant son 1er trajet.\n\n'
                               'Téléchargez l\'application :\n'
                               '▶ Google Play : LIEN_GOOGLE_PLAY\n'
                               '🍎 App Store : LIEN_APP_STORE',

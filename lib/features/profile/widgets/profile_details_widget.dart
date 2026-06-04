@@ -3,11 +3,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:get/get.dart';
-import 'package:ride_sharing_user_app/features/auth/screens/reset_password_screen.dart';
 import 'package:ride_sharing_user_app/features/help_and_support/controllers/help_and_support_controller.dart';
 import 'package:ride_sharing_user_app/features/profile/controllers/profile_controller.dart';
 import 'package:ride_sharing_user_app/features/profile/widgets/profile_item_widget.dart';
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
+import 'package:ride_sharing_user_app/helper/dynamic_translation_helper.dart';
 import 'package:ride_sharing_user_app/helper/profile_helper.dart';
 import 'package:ride_sharing_user_app/localization/localization_controller.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
@@ -65,8 +65,9 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
                 value: profileController
                             .profileInfo!.details!.services!.length ==
                         1
-                    ? profileController.profileInfo!.details!.services![0].tr
-                    : '${profileController.profileInfo!.details!.services![0].tr} & ${profileController.profileInfo!.details!.services![1].tr}',
+                    ? DynamicTranslationHelper.translate(
+                        profileController.profileInfo!.details!.services![0])
+                    : '${DynamicTranslationHelper.translate(profileController.profileInfo!.details!.services![0])} & ${DynamicTranslationHelper.translate(profileController.profileInfo!.details!.services![1])}',
               ),
             ProfileItemWidget(
               title: 'contact',
@@ -80,7 +81,8 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
             ),
             ProfileItemWidget(
               title: 'identification_type',
-              value: profileController.profileInfo!.identificationType!.tr,
+              value: DynamicTranslationHelper.translate(
+                  profileController.profileInfo!.identificationType),
             ),
             ProfileItemWidget(
               title: 'identification_number',

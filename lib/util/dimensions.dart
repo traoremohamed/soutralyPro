@@ -2,12 +2,12 @@ import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/localization/localization_controller.dart';
 
 class Dimensions {
-  static double fontSizeExtraSmall = Get.context!.width >= 1300 ? 14 : 10;
-  static double fontSizeSmall = Get.context!.width >= 1300 ? 16 : 12;
-  static double fontSizeDefault = Get.context!.width >= 1300 ? 18 : 14;
-  static double fontSizeLarge = Get.context!.width >= 1300 ? 20 : 16;
-  static double fontSizeExtraLarge = Get.context!.width >= 1300 ? 22 : 18;
-  static double fontSizeOverLarge = Get.context!.width >= 1300 ? 28 : 24;
+  static double fontSizeExtraSmall = Get.context!.width >= 1300 ? 16 : 12;
+  static double fontSizeSmall = Get.context!.width >= 1300 ? 18 : 14;
+  static double fontSizeDefault = Get.context!.width >= 1300 ? 20 : 16;
+  static double fontSizeLarge = Get.context!.width >= 1300 ? 22 : 18;
+  static double fontSizeExtraLarge = Get.context!.width >= 1300 ? 24 : 20;
+  static double fontSizeOverLarge = Get.context!.width >= 1300 ? 30 : 26;
   static double fontSizeTwenty = 20;
 
   static const double paddingSizeTiny = 3.0;
@@ -21,7 +21,7 @@ class Dimensions {
   static const double paddingSizeSignUp = 35.0;
   static const double paddingSizeOverLarge = 30.0;
   static const double paddingSizeOver = 50.0;
-  static  double splashLogoWidth = Get.context!.width <= 400 ?120 : 150.0;
+  static double splashLogoWidth = Get.context!.width <= 400 ? 120 : 150.0;
 
   static const double radiusSmall = 5.0;
   static const double radiusDefault = 10.0;
@@ -53,8 +53,7 @@ class Dimensions {
   static const double topSpace = 100;
   static const double topBelowSpace = 40;
 
-
   static const double orderStatusIconHeight = 70;
-  static double headerCardHeight = Get.find<LocalizationController>().isLtr? 45 : 53;
-
+  static double headerCardHeight =
+      Get.find<LocalizationController>().isLtr ? 45 : 53;
 }

@@ -64,9 +64,12 @@ class _WalletScreenState extends State<WalletScreen>
       if (!tabController.indexIsChanging) {
         if (tabController.index == 1) {
           Get.find<WalletController>().setPayableTypeIndex(1, notify: false);
+          Get.find<WalletController>().getCashCollectHistoryList(1);
         } else if (tabController.index == 2) {
-          Get.find<WalletController>().setPayableTypeIndex(0, notify: false);
+          Get.find<WalletController>().setPayableTypeIndex(2, notify: false);
+          Get.find<WalletController>().setSelectedHistoryIndex(6, false);
         } else if (tabController.index == 0) {
+          Get.find<WalletController>().setPayableTypeIndex(0, notify: false);
           Get.find<WalletController>().setSelectedHistoryIndex(4, false);
         }
       }
@@ -112,7 +115,16 @@ class _WalletScreenState extends State<WalletScreen>
                   children: [
                     SizedBox(height: Get.height * 0.05),
                     walletController.walletTypeIndex != 2
-                        ? const WalletMoneyAmountWidget()
+                        ? WalletMoneyAmountWidget(
+                            onWithdrawableBalanceTap: () {
+                              if (tabController.index != 0) {
+                                tabController.animateTo(0);
+                              }
+                              final walletCtrl = Get.find<WalletController>();
+                              walletCtrl.setPayableTypeIndex(0, notify: false);
+                              walletCtrl.setSelectedHistoryIndex(1, true);
+                            },
+                          )
                         : Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: Dimensions.paddingSizeDefault),
@@ -146,9 +158,9 @@ class _WalletScreenState extends State<WalletScreen>
                             .primaryColor
                             .withValues(alpha: 0.15),
                         tabs: [
-                          Tab(text: 'withdraw_requests'.tr),
-                          Tab(text: 'collected_cash_history'.tr),
-                          Tab(text: 'payable_cash_history'.tr),
+                          Tab(text: 'main_history'.tr),
+                          Tab(text: 'cash_collect_history'.tr),
+                          Tab(text: 'commission_deduction_history'.tr),
                         ],
                       ),
                     if (walletController.walletTypeIndex != 1)

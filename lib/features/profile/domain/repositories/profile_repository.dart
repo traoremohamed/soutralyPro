@@ -72,6 +72,16 @@ class ProfileRepository implements ProfileRepositoryInterface {
   }
 
   @override
+  Future<Response?> getDriverBrandingOptions() async {
+    return await apiClient.getData(AppConstants.driverBrandingOptions);
+  }
+
+  @override
+  Future<Response?> subscribeDriverBranding(Map<String, dynamic> body) async {
+    return await apiClient.postData(AppConstants.driverBrandingSubscribe, body);
+  }
+
+  @override
   Future<Response?> updateProfileInfo(
       String firstName,
       String lastname,

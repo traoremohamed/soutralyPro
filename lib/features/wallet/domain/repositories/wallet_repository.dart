@@ -196,4 +196,43 @@ class WalletRepository implements WalletRepositoryInterface {
     }
     return await apiClient.postData(AppConstants.mockWaveRechargeUri, body);
   }
+
+  @override
+  Future<Response?> createWaveCheckoutSession(String userId, String amount,
+      {String currency = 'XOF', String? successUrl, String? errorUrl}) async {
+    final body = {
+      'user_id': userId,
+      'amount': amount,
+      'currency': currency,
+      if (successUrl != null && successUrl.isNotEmpty)
+        'success_url': successUrl,
+      if (errorUrl != null && errorUrl.isNotEmpty) 'error_url': errorUrl,
+    };
+
+    return await apiClient.postData(AppConstants.waveCheckoutSessionUri, body);
+  }
+
+  @override
+  Future<Response?> initiatePaymentSession(
+      String userId, String amount, String paymentMethod,
+      {String? paymentNumber,
+      String currency = 'XOF',
+      String? successUrl,
+      String? errorUrl,
+      String? cancelUrl}) async {
+    final body = {
+      'user_id': userId,
+      'amount': amount,
+      'payment_method': paymentMethod,
+      'currency': currency,
+      if (paymentNumber != null && paymentNumber.isNotEmpty)
+        'payment_number': paymentNumber,
+      if (successUrl != null && successUrl.isNotEmpty)
+        'success_url': successUrl,
+      if (errorUrl != null && errorUrl.isNotEmpty) 'error_url': errorUrl,
+      if (cancelUrl != null && cancelUrl.isNotEmpty) 'cancel_url': cancelUrl,
+    };
+
+    return await apiClient.postData(AppConstants.paymentsInitiateUri, body);
+  }
 }

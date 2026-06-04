@@ -17,6 +17,8 @@ abstract class ProfileRepositoryInterface implements RepositoryInterface {
       List<MultipartBody> images, List<MultipartDocument> files);
   Future<Response?> getDriverPricingOptions();
   Future<Response?> selectDriverPricingMode(Map<String, dynamic> body);
+  Future<Response?> getDriverBrandingOptions();
+  Future<Response?> subscribeDriverBranding(Map<String, dynamic> body);
   Future<Response?> updateProfileInfo(
       String firstName,
       String lastname,

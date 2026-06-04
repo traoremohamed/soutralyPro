@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -18,6 +19,7 @@ import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/features/auth/domain/models/signup_body.dart';
 import 'package:ride_sharing_user_app/features/auth/domain/models/category_model.dart';
 import 'package:ride_sharing_user_app/features/auth/screens/sign_in_screen.dart';
+import 'package:ride_sharing_user_app/features/auth/screens/otp_log_in_screen.dart';
 import 'package:ride_sharing_user_app/features/auth/widgets/approve_dialog_widget.dart';
 import 'package:ride_sharing_user_app/features/dashboard/screens/dashboard_screen.dart';
 import 'package:ride_sharing_user_app/features/auth/screens/reset_password_screen.dart';
@@ -131,6 +133,13 @@ class AuthController extends GetxController implements GetxService {
   void setPrefillPhone(String phoneWithCountryCode) {
     prefillPhone = phoneWithCountryCode;
     update();
+  }
+
+  void clearPrefillPhone({bool notify = true}) {
+    prefillPhone = '';
+    if (notify) {
+      update();
+    }
   }
 
   void toggleCategorie(int id, String code) {
@@ -327,21 +336,16 @@ class AuthController extends GetxController implements GetxService {
         final AuthController authController = Get.find<AuthController>();
 
         if (isPhoneNotVerified) {
-          if (Get.find<SplashController>().config?.isFirebaseOtpVerification ??
-              false) {
-            authController.firebaseOtpSend(
-                countryCode: countryCode,
-                number: phone,
-                from: VerificationForm.login);
-          } else if (Get.find<SplashController>().config?.isSmsGateway ??
-              false) {
-            Get.to(() => VerificationScreen(
-                countryCode: countryCode,
-                number: phone,
-                form: VerificationForm.login));
-          } else {
-            showCustomSnackBar('sms_gateway_not_integrate'.tr);
-          }
+          authController
+              .sendOtp(countryCode: countryCode, number: phone)
+              .then((otpResponse) {
+            if (otpResponse.statusCode == 200) {
+              Get.to(() => VerificationScreen(
+                  countryCode: countryCode,
+                  number: phone,
+                  form: VerificationForm.login));
+            }
+          });
         }
       }
     } else {
@@ -411,12 +415,15 @@ class AuthController extends GetxController implements GetxService {
       registrationImages.add(MultipartBody('driving_license_images[]', image));
     }
 
-    if (partnerRccmFile != null)
+    if (partnerRccmFile != null) {
       docs.add(MultipartDocument('rccm', partnerRccmFile));
-    if (partnerTransportFile != null)
+    }
+    if (partnerTransportFile != null) {
       docs.add(MultipartDocument('transport_card', partnerTransportFile));
-    if (partnerIdFile != null)
+    }
+    if (partnerIdFile != null) {
       docs.add(MultipartDocument('partner_id', partnerIdFile));
+    }
 
     Response? response = await authServiceInterface.registration(
         signUpBody: signUpBody,
@@ -448,25 +455,9 @@ class AuthController extends GetxController implements GetxService {
       );
 
       if (configModel?.verification ?? false) {
-        // Afficher un message d'information à l'utilisateur
-        showCustomSnackBar(
-            "Un code de vérification (OTP) va vous être envoyé. Il peut arriver par WhatsApp ou par notification.",
-            isError: false);
-        if (configModel?.isFirebaseOtpVerification ?? false) {
-          Get.find<AuthController>().firebaseOtpSend(
-            countryCode: code,
-            number: signUpBody.phone?.replaceAll(code, '') ?? '',
-            from: VerificationForm.login,
-          );
-        } else if (configModel?.isSmsGateway ?? false) {
-          Get.to(() => VerificationScreen(
-                countryCode: code,
-                number: signUpBody.phone?.replaceAll(code, '') ?? '',
-                form: VerificationForm.login,
-              ));
-        } else {
-          showCustomSnackBar('sms_gateway_not_integrate'.tr);
-        }
+        final String signUpPhone = signUpBody.phone ?? '';
+        setPrefillPhone(signUpPhone);
+        Get.offAll(() => const OtpLoginScreen());
       } else {
         showCustomSnackBar('registration_completed_successfully'.tr,
             isError: false);
@@ -511,8 +502,14 @@ class AuthController extends GetxController implements GetxService {
       {required String countryCode, required String number}) async {
     _isOtpSending = true;
     update();
-    Response? response =
-        await authServiceInterface.sendOtp(phone: countryCode + number);
+
+    String? fcmToken;
+    try {
+      fcmToken = await FirebaseMessaging.instance.getToken();
+    } catch (_) {}
+
+    Response? response = await authServiceInterface.sendOtp(
+        phone: countryCode + number, fcmToken: fcmToken);
     if (response!.statusCode == 200) {
       _isOtpSending = false;
       showCustomSnackBar('otp_sent_successfully'.tr, isError: false);
@@ -605,6 +602,21 @@ class AuthController extends GetxController implements GetxService {
         Map? map = response?.body;
         _isLoading = false;
         if (!suppressAutoLogin) {
+          final firebaseCustomToken = (map != null && map['data'] != null)
+              ? map['data']['firebase_custom_token']
+              : null;
+
+          if (firebaseCustomToken is String && firebaseCustomToken.isNotEmpty) {
+            try {
+              await FirebaseAuth.instance
+                  .signInWithCustomToken(firebaseCustomToken);
+            } catch (e) {
+              if (kDebugMode) {
+                print('Firebase custom token sign-in failed: $e');
+              }
+            }
+          }
+
           // Token peut être sous map['data']['token'] ou directement map['token']
           final token = (map != null &&
                   map['data'] != null &&

@@ -8,7 +8,6 @@ import 'package:ride_sharing_user_app/features/auth/domain/enums/verification_fr
 import 'package:ride_sharing_user_app/features/auth/screens/verification_screen.dart';
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/helper/display_helper.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
@@ -33,6 +32,13 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
     Get.find<AuthController>().countryDialCode = CountryCode.fromCountryCode(
             Get.find<SplashController>().config!.countryCode!)
         .dialCode!;
+
+    final AuthController authController = Get.find<AuthController>();
+    if (authController.prefillPhone.isNotEmpty) {
+      phoneController.text = authController.prefillPhone
+          .replaceAll(authController.countryDialCode, '');
+      authController.clearPrefillPhone(notify: false);
+    }
   }
 
   @override
@@ -145,14 +151,6 @@ class _OtpLoginScreenState extends State<OtpLoginScreen> {
                                               number: phone)
                                           .then((value) {
                                         if (value.statusCode == 200) {
-                                          try {
-                                            final waUrl = value.body['data']
-                                                ?['whatsapp_url'];
-                                            if (waUrl != null &&
-                                                waUrl.toString().isNotEmpty) {
-                                              launchUrlString(waUrl.toString());
-                                            }
-                                          } catch (e) {}
                                           final bool isNewUser =
                                               value.body['data']
                                                       ?['is_new_user'] ??

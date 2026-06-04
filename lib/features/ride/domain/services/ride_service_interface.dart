@@ -1,5 +1,3 @@
-
-
 import 'package:image_picker/image_picker.dart';
 
 abstract class RideServiceInterface {
@@ -12,14 +10,16 @@ abstract class RideServiceInterface {
   Future<dynamic> matchOtp(String tripId, String otp);
   Future<dynamic> startForPickup(String tripId);
   Future<dynamic> remainDistance(String id);
-  Future<dynamic> tripStatusUpdate(String status, String id,String cancellationCause,String dateTime);
+  Future<dynamic> tripStatusUpdate(
+      String status, String id, String cancellationCause, String dateTime);
   Future<dynamic> getPendingRideRequestList(int offset, {int limit = 10});
   Future<dynamic> ongoingTripList();
   Future<dynamic> lastRideDetail();
   Future<dynamic> getFinalFare(String tripId);
   Future<dynamic> arrivalPickupPoint(String tripId);
   Future<dynamic> arrivalDestination(String tripId, String destination);
-  Future<dynamic> waitingForCustomer (String tripId, String status);
+  Future<dynamic> waitingForCustomer(String tripId, String status);
+  Future<dynamic> getLiveFees(String tripId);
   Future<dynamic> getOnGoingParcelList(int offset);
   Future<dynamic> getUnpaidParcelList(int offset);
 }

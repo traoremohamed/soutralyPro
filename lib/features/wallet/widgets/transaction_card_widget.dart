@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/helper/date_converter.dart';
+import 'package:ride_sharing_user_app/helper/dynamic_translation_helper.dart';
 import 'package:ride_sharing_user_app/helper/price_converter.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
@@ -13,28 +14,63 @@ class TransactionCardWidget extends StatelessWidget {
   final Transaction transaction;
   const TransactionCardWidget({super.key, required this.transaction});
 
+  String _formatFrenchDateTime(String? rawDate) {
+    return DateConverter.toFrenchDateTime(rawDate);
+  }
+
+  bool _isFailed(Transaction t) {
+    final String status = (t.status ?? '').toLowerCase();
+    final String attr = (t.attribute ?? '').toLowerCase();
+    return status == 'failed' || attr.contains('failed');
+  }
+
+  bool _isForfaitSubscription(Transaction t) {
+    final String attr = (t.attribute ?? '').toLowerCase();
+    return attr.contains('driver_daily_forfait') || attr.contains('forfait');
+  }
+
   String _labelFromTransaction(Transaction t) {
     final String attr = (t.attribute ?? '').toLowerCase();
     final String account = (t.account ?? '').toLowerCase();
 
+    if (_isFailed(t)) {
+      final String method = (t.paymentMethod ?? '').toLowerCase();
+      if (method == 'orange_money') {
+        return 'Rechargement Orange Money echec';
+      }
+      if (method == 'wave') {
+        return 'Rechargement Wave echec';
+      }
+      return 'Rechargement echoue';
+    }
+
     if (attr.contains('fund_added_digitally')) {
-      return 'Rechargement de compte par WAVE';
+      final String method = (t.paymentMethod ?? '').toLowerCase();
+      if (method == 'orange_money') {
+        return 'Rechargement de compte par Orange Money';
+      }
+      if (method == 'wave') {
+        return 'Rechargement de compte par WAVE';
+      }
+      return 'Fonds ajoutes numeriquement';
     }
     if (attr.contains('driver_daily_forfait')) {
       return 'Achat de forfait';
     }
     if (attr.contains('admin_commission')) {
-      return 'Debit du compte pour comission';
+      return 'Prélèvement de commission';
     }
     if (attr.contains('wallet') || account.contains('wallet')) {
       if ((t.credit ?? 0) > 0) {
         return 'Rechargement de compte';
       }
       if ((t.debit ?? 0) > 0) {
-        return 'Debit wallet';
+        return 'Debit portefeuille';
       }
     }
-    return t.attribute ?? t.account ?? 'Transaction';
+    return DynamicTranslationHelper.translate(
+      t.attribute ?? t.account ?? 'Transaction',
+    );
   }
 
   @override
@@ -70,12 +106,44 @@ class TransactionCardWidget extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   vertical: Dimensions.paddingSizeExtraSmall),
                               child: Text(
-                                DateConverter.isoStringToDateTimeString(
-                                    transaction.createdAt!),
+                                _formatFrenchDateTime(transaction.createdAt),
                                 style: textRegular.copyWith(
                                     color: Theme.of(context).hintColor),
                               ),
                             ),
+                            if (_isFailed(transaction) &&
+                                (transaction.errorMessage ?? '').isNotEmpty)
+                              Text(
+                                transaction.errorMessage!,
+                                style: textRegular.copyWith(
+                                    color: Theme.of(context).colorScheme.error),
+                              ),
+                            if (_isForfaitSubscription(transaction))
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Recharge: ${_formatFrenchDateTime(transaction.forfaitRechargeAt)}',
+                                    style: textRegular.copyWith(
+                                        color: Theme.of(context).hintColor),
+                                  ),
+                                  Text(
+                                    'Expiration: ${_formatFrenchDateTime(transaction.forfaitExpiresAt)}',
+                                    style: textRegular.copyWith(
+                                        color: Theme.of(context).hintColor),
+                                  ),
+                                  Text(
+                                    'Jours: ${transaction.forfaitDays ?? '-'}',
+                                    style: textRegular.copyWith(
+                                        color: Theme.of(context).hintColor),
+                                  ),
+                                  Text(
+                                    'Montant: ${PriceConverter.convertPayablePrice(context, transaction.forfaitAmount ?? (transaction.debit ?? transaction.credit ?? 0))}',
+                                    style: textRegular.copyWith(
+                                        color: Theme.of(context).hintColor),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ),
@@ -87,18 +155,26 @@ class TransactionCardWidget extends StatelessWidget {
                           vertical: Dimensions.paddingSizeSeven),
                       decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(100),
-                          color: transaction.debit! > 0
+                          color: _isFailed(transaction)
                               ? Theme.of(context)
                                   .colorScheme
                                   .error
                                   .withValues(alpha: .15)
-                              : Theme.of(context)
-                                  .primaryColor
-                                  .withValues(alpha: .08)),
+                              : transaction.debit! > 0
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .error
+                                      .withValues(alpha: .15)
+                                  : Theme.of(context)
+                                      .primaryColor
+                                      .withValues(alpha: .08)),
                       child: Text(
-                          '${transaction.debit! > 0 ? '-' : '+'}${PriceConverter.convertPrice(context, transaction.debit! > 0 ? transaction.debit! : transaction.credit!)}',
+                          _isFailed(transaction)
+                              ? 'Echec'
+                              : '${transaction.debit! > 0 ? '-' : '+'}${PriceConverter.convertPayablePrice(context, transaction.debit! > 0 ? transaction.debit! : transaction.credit!)}',
                           style: textRobotoBold.copyWith(
-                              color: transaction.debit! > 0
+                              color: (_isFailed(transaction) ||
+                                      transaction.debit! > 0)
                                   ? Theme.of(context).colorScheme.error
                                   : Theme.of(context).primaryColor)))
                 ],

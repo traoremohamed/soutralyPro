@@ -552,12 +552,11 @@ class WalletController extends GetxController implements GetxService {
       if (offset == 1) {
         transactionModel = TransactionModel.fromJson(response.body);
       } else {
-        transactionModel!.data!
-            .addAll(TransactionModel.fromJson(response.body).data!);
-        transactionModel!.offset =
-            TransactionModel.fromJson(response.body).offset;
-        transactionModel!.totalSize =
-            TransactionModel.fromJson(response.body).totalSize;
+        final TransactionModel parsedModel =
+            TransactionModel.fromJson(response.body);
+        transactionModel!.data!.addAll(parsedModel.data ?? []);
+        transactionModel!.offset = parsedModel.offset;
+        transactionModel!.totalSize = parsedModel.totalSize;
       }
       isLoading = false;
     } else {
@@ -616,6 +615,82 @@ class WalletController extends GetxController implements GetxService {
         await Get.find<ProfileController>().getProfileInfo();
       } catch (_) {}
     } else if (response != null) {
+      ApiChecker.checkApi(response);
+    }
+    update();
+    return response;
+  }
+
+  Future<Response?> createWaveCheckoutSession(String userId, String amount,
+      {String currency = 'XOF', String? successUrl, String? errorUrl}) async {
+    isLoading = true;
+    update();
+    Response? response = await walletServiceInterface.createWaveCheckoutSession(
+      userId,
+      amount,
+      currency: currency,
+      successUrl: successUrl,
+      errorUrl: errorUrl,
+    );
+    isLoading = false;
+    if (response != null && response.statusCode != 200) {
+      ApiChecker.checkApi(response);
+    }
+    update();
+    return response;
+  }
+
+  Future<Response?> initiatePaymentSession(
+      String userId, String amount, String paymentMethod,
+      {String? paymentNumber,
+      String currency = 'XOF',
+      String? successUrl,
+      String? errorUrl,
+      String? cancelUrl}) async {
+    isLoading = true;
+    update();
+    Response? response = await walletServiceInterface.initiatePaymentSession(
+      userId,
+      amount,
+      paymentMethod,
+      paymentNumber: paymentNumber,
+      currency: currency,
+      successUrl: successUrl,
+      errorUrl: errorUrl,
+      cancelUrl: cancelUrl,
+    );
+    isLoading = false;
+    if (response != null && response.statusCode != 200) {
+      String parsedError = 'Transaction echouee';
+      final body = response.body;
+      if (body is Map &&
+          body['errors'] is List &&
+          (body['errors'] as List).isNotEmpty) {
+        final first = (body['errors'] as List).first;
+        if (first is Map && first['message'] != null) {
+          parsedError = first['message'].toString();
+        }
+      }
+
+      final failedTx = Transaction(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        attribute: 'fund_added_digitally_failed',
+        account: 'wallet_balance',
+        status: 'failed',
+        paymentMethod: paymentMethod,
+        paymentNumber: paymentNumber,
+        errorMessage: parsedError,
+        debit: 0,
+        credit: 0,
+        createdAt: DateTime.now().toIso8601String(),
+      );
+
+      transactionModel ??=
+          TransactionModel(data: <Transaction>[], totalSize: 0, offset: '1');
+      transactionModel!.data ??= <Transaction>[];
+      transactionModel!.data!.insert(0, failedTx);
+      transactionModel!.totalSize = (transactionModel!.totalSize ?? 0) + 1;
+
       ApiChecker.checkApi(response);
     }
     update();

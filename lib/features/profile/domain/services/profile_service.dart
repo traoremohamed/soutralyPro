@@ -32,6 +32,16 @@ class ProfileService implements ProfileServiceInterface {
   }
 
   @override
+  Future getDriverBrandingOptions() {
+    return profileRepositoryInterface.getDriverBrandingOptions();
+  }
+
+  @override
+  Future subscribeDriverBranding(Map<String, dynamic> body) {
+    return profileRepositoryInterface.subscribeDriverBranding(body);
+  }
+
+  @override
   Future dailyLog() {
     return profileRepositoryInterface.dailyLog();
   }
