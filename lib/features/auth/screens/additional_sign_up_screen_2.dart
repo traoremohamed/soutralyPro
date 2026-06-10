@@ -946,7 +946,8 @@ class AdditionalSignUpScreen2 extends StatelessWidget {
                                   const PolicyViewerScreen(
                                       htmlType: HtmlType.termsAndConditions)),
                               child: Text(
-                                "J'accepte les conditions générales d'utilisation",
+                                //"J'accepte les conditions générales d'utilisation",
+                                "Cochez ici pour accepter les conditions générales d'utilisation et le traitement de vos informations personnelles conformement à la politique de confidentialité.",
                                 style: textRegular.copyWith(
                                     fontSize: Dimensions.fontSizeSmall,
                                     decoration: TextDecoration.underline,
