@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ride_sharing_user_app/features/ride/domain/enums/refund_status_enum.dart';
 
 class TripDetailsModel {
@@ -216,7 +218,8 @@ class TripDetail {
     if (json['tips'] != null) {
       tips = json['tips'].toDouble();
     }
-    intermediateCoordinates = json['intermediate_coordinates'];
+    intermediateCoordinates =
+        _normalizeJsonLikeValue(json['intermediate_coordinates']);
 
     additionalCharge = json['additional_charge'].toString();
     pickupCoordinates = json['pickup_coordinates'] != null
@@ -263,7 +266,8 @@ class TripDetail {
     createdAt = json['created_at'];
     completed = json['completed'];
     entrance = json['entrance'];
-    intermediateAddresses = json['intermediate_addresses'];
+    intermediateAddresses =
+        _normalizeJsonLikeValue(json['intermediate_addresses']);
     encodedPolyline = json['encoded_polyline'];
     customerAvgRating = json['customer_avg_rating'] ?? '0';
     driverAvgRating = json['driver_avg_rating'];
@@ -315,6 +319,18 @@ class TripDetail {
     parcelStartTime = json['parcel_start_time'];
     parcelCompleteTime = json['parcel_complete_time'];
     scheduledAt = json['scheduled_at'];
+  }
+
+  static String? _normalizeJsonLikeValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is List || value is Map<String, dynamic>) {
+      return jsonEncode(value);
+    }
+    if (value is Map) {
+      return jsonEncode(Map<String, dynamic>.from(value));
+    }
+    return value.toString();
   }
 }
 

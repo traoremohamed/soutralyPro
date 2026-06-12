@@ -8,12 +8,14 @@ class WalletAmountTypeCardWidget extends StatelessWidget {
   final String icon;
   final double amount;
   final String title;
+  final String? badgeText;
   final bool haveBorderColor;
   const WalletAmountTypeCardWidget(
       {super.key,
       required this.icon,
       required this.amount,
       required this.title,
+      this.badgeText,
       this.haveBorderColor = false});
 
   @override
@@ -39,6 +41,26 @@ class WalletAmountTypeCardWidget extends StatelessWidget {
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(width: 40, child: Image.asset(icon)),
+          if (badgeText != null && badgeText!.isNotEmpty)
+            Container(
+              margin:
+                  const EdgeInsets.only(top: Dimensions.paddingSizeExtraSmall),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimensions.paddingSizeExtraSmall,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(Dimensions.radiusSmall),
+              ),
+              child: Text(
+                badgeText!,
+                style: textRegular.copyWith(
+                  fontSize: Dimensions.fontSizeExtraSmall,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(top: Dimensions.paddingSizeSmall),
             child: Text(
@@ -55,6 +77,8 @@ class WalletAmountTypeCardWidget extends StatelessWidget {
             ),
           ),
           Text(title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: textRegular.copyWith(
                   fontSize: Dimensions.fontSizeSmall,
                   color: haveBorderColor

@@ -74,6 +74,42 @@ class WalletController extends GetxController implements GetxService {
   List<PaymentGateways>? paymentGateways = [];
   int paymentGatewayIndex = -1;
 
+  bool isDigitalRechargeTransaction(Transaction t) {
+    final String attr = (t.attribute ?? '').toLowerCase();
+    final String method = (t.paymentMethod ?? '').toLowerCase();
+    final bool isRechargeAttr = attr.contains('fund_added_digitally');
+    final bool isRechargeMethod = method == 'wave' || method == 'orange_money';
+    return isRechargeAttr || isRechargeMethod;
+  }
+
+  double get currentMonthRechargeTotal {
+    final transactions = transactionModel?.data ?? const <Transaction>[];
+    final now = DateTime.now();
+    double total = 0;
+
+    for (final t in transactions) {
+      if (!isDigitalRechargeTransaction(t)) {
+        continue;
+      }
+
+      final status = (t.status ?? '').toLowerCase();
+      if (status == 'failed' || status == 'cancelled' || status == 'rejected') {
+        continue;
+      }
+
+      final createdAt = DateTime.tryParse(t.createdAt ?? '');
+      if (createdAt == null ||
+          createdAt.year != now.year ||
+          createdAt.month != now.month) {
+        continue;
+      }
+
+      total += (t.credit ?? 0);
+    }
+
+    return total;
+  }
+
   void setSelectedHistoryIndex(int index, bool notify) {
     selectedHistoryIndex = index;
     pendingSettledWithdrawModel = null;
@@ -85,7 +121,7 @@ class WalletController extends GetxController implements GetxService {
     } else if (index == 2) {
       getWithdrawSettledList(1);
     } else if (index == 3) {
-      getCashCollectHistoryList(1);
+      getWalletHistoryList(1);
     } else {
       getWalletHistoryList(1);
     }

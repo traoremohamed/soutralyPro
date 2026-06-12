@@ -166,7 +166,8 @@ class WalletMoneyAmountWidget extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              'Forfait actif jusqu\'au $formattedForfaitExpiry',
+                              'Votre dernier forfait a expiré le $formattedForfaitExpiry',
+                              // 'Forfait actif jusqu\'au $formattedForfaitExpiry',
                               style: textRegular.copyWith(
                                 fontSize: Dimensions.fontSizeSmall,
                                 color: isForfaitExpiringSoon

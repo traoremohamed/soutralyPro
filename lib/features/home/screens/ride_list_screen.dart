@@ -62,6 +62,7 @@ class _TripCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     String firstRoute = '';
     String secondRoute = '';
+    String thirdRoute = '';
     List<dynamic> extraRoute = [];
     if (rideRequest.intermediateAddresses != null &&
         rideRequest.intermediateAddresses != '[[, ]]') {
@@ -71,6 +72,9 @@ class _TripCardWidget extends StatelessWidget {
       }
       if (extraRoute.isNotEmpty && extraRoute.length > 1) {
         secondRoute = extraRoute[1];
+      }
+      if (extraRoute.isNotEmpty && extraRoute.length > 2) {
+        thirdRoute = extraRoute[2];
       }
     }
 
@@ -217,6 +221,7 @@ class _TripCardWidget extends StatelessWidget {
                 destinationAddress: rideRequest.destinationAddress!,
                 extraOne: firstRoute,
                 extraTwo: secondRoute,
+                extraThree: thirdRoute,
                 entrance: rideRequest.entrance ?? '',
               ),
               if (rideRequest.customer != null)

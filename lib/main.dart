@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:ride_sharing_user_app/helper/notification_helper.dart';
+import 'package:ride_sharing_user_app/helper/deep_link_service.dart';
 import 'package:ride_sharing_user_app/helper/otp_push_helper.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
@@ -69,10 +70,27 @@ Future<void> main() async {
   runApp(MyApp(languages: languages, notificationData: remoteMessage?.data));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   final Map<String, Map<String, String>> languages;
   final Map<String, dynamic>? notificationData;
   const MyApp({super.key, required this.languages, this.notificationData});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    DeepLinkService.instance.initDeepLinks();
+  }
+
+  @override
+  void dispose() {
+    DeepLinkService.instance.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,10 +120,10 @@ class MyApp extends StatelessWidget {
                   ),
                   theme: themeController.darkTheme ? darkTheme : lightTheme,
                   locale: const Locale('fr', 'CI'),
-                  translations: Messages(languages: languages),
+                  translations: Messages(languages: widget.languages),
                   fallbackLocale: const Locale('fr', 'CI'),
                   initialRoute: RouteHelper.getSplashRoute(
-                      notificationData: notificationData),
+                      notificationData: widget.notificationData),
                   getPages: RouteHelper.routes,
                   // Ajout de la route pour la connexion
                   routes: {

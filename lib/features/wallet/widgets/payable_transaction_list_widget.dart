@@ -34,7 +34,11 @@ class _PayableTransactionListWidgetState
             .where((t) =>
                 (t.attribute ?? '').toLowerCase().contains('admin_commission'))
             .toList()
-        : allTransactions;
+        : widget.walletController.selectedHistoryIndex == 3
+            ? allTransactions
+                .where(widget.walletController.isDigitalRechargeTransaction)
+                .toList()
+            : allTransactions;
 
     return widget.walletController.transactionModel != null
         ? filteredTransactions.isNotEmpty
@@ -55,7 +59,10 @@ class _PayableTransactionListWidgetState
                     if (kDebugMode) {
                       print('==========offset========>$offset');
                     }
-                    if (widget.tabIndex == 1) {
+                    if (widget.walletController.selectedHistoryIndex == 3) {
+                      await widget.walletController
+                          .getWalletHistoryList(offset!);
+                    } else if (widget.tabIndex == 1) {
                       await widget.walletController
                           .getCashCollectHistoryList(offset!);
                     } else if (widget.tabIndex == 2) {
@@ -84,7 +91,11 @@ class _PayableTransactionListWidgetState
                   ),
                 ),
               )
-            : const NoDataWidget(title: 'no_transaction_found')
+            : NoDataWidget(
+                title: widget.walletController.selectedHistoryIndex == 3
+                    ? 'no_recharge_history'
+                    : 'no_transaction_found',
+              )
         : SizedBox(
             height: Get.height, child: const NotificationShimmerWidget());
   }

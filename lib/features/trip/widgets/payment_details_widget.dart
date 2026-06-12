@@ -14,6 +14,9 @@ class PaymentDetailsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final subtotalAmount = (tripDetail?.distanceWiseFare ?? 0) +
+        (tripDetail?.type != 'parcel' ? (tripDetail?.waitingFee ?? 0) : 0);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(
         Dimensions.paddingSizeDefault,
@@ -63,13 +66,7 @@ class PaymentDetailsWidget extends StatelessWidget {
             amount: tripDetail?.waitingFee ?? 0,
             payableRounded: true,
           ),
-        if (tripDetail?.type != 'parcel')
-          PaymentItemInfoWidget(
-            icon: Images.idleHourIcon,
-            title: 'cancellation_price'.tr,
-            amount: tripDetail!.cancellationFee ?? 0,
-            payableRounded: true,
-          ),
+        /*
         if (tripDetail?.type != 'parcel')
           PaymentItemInfoWidget(
             icon: Images.farePrice,
@@ -77,16 +74,11 @@ class PaymentDetailsWidget extends StatelessWidget {
             amount: tripDetail?.adminCommission ?? 0,
             payableRounded: true,
           ),
-        PaymentItemInfoWidget(
-          icon: Images.farePrice,
-          title: 'vat_tax'.tr,
-          amount: tripDetail!.vatTax ?? 0,
-          payableRounded: true,
-        ),
+        */
         Divider(color: Theme.of(context).hintColor.withValues(alpha: 0.2)),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Flexible(
-            child: Text('${'sub_total'.tr} (${'paid'.tr})',
+            child: Text('sub_total'.tr,
                 style: textSemiBold.copyWith(
                   color: Theme.of(context).primaryColor,
                 )),
@@ -101,10 +93,7 @@ class PaymentDetailsWidget extends StatelessWidget {
                 borderRadius:
                     BorderRadius.circular(Dimensions.paddingSizeExtraSmall)),
             child: Text(
-              PriceConverter.convertPayablePrice(
-                  context,
-                  double.parse(tripDetail!.paidFare!) -
-                      (tripDetail?.dueAmount ?? 0)),
+              PriceConverter.convertPayablePrice(context, subtotalAmount),
               style: textRobotoBold.copyWith(
                 color: Get.isDarkMode
                     ? Colors.white

@@ -19,7 +19,7 @@ class TransactionCardButtonWidget extends StatelessWidget {
           child: SizedBox(
             height: ((walletController.walletTypeIndex == 0 && tabIndex == 0) ||
                     (walletController.walletTypeIndex == 2))
-                ? 150
+                ? 182
                 : 10,
             child: ListView(
               scrollDirection: Axis.horizontal,
@@ -41,6 +41,23 @@ class TransactionCardButtonWidget extends StatelessWidget {
                       title: 'transactions_wallet'.tr,
                       haveBorderColor:
                           walletController.selectedHistoryIndex == 4
+                              ? true
+                              : false,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: walletController.isLoading
+                        ? null
+                        : () {
+                            walletController.setSelectedHistoryIndex(3, true);
+                          },
+                    child: WalletAmountTypeCardWidget(
+                      icon: Images.paidBalanceIcon,
+                      amount: walletController.currentMonthRechargeTotal,
+                      title: 'recharge_history'.tr,
+                      badgeText: 'monthly_recharge_total'.tr,
+                      haveBorderColor:
+                          walletController.selectedHistoryIndex == 3
                               ? true
                               : false,
                     ),
@@ -77,22 +94,6 @@ class TransactionCardButtonWidget extends StatelessWidget {
                       title: 'already_withdrawn'.tr,
                       haveBorderColor:
                           walletController.selectedHistoryIndex == 2
-                              ? true
-                              : false,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: walletController.isLoading
-                        ? null
-                        : () {
-                            walletController.setSelectedHistoryIndex(3, true);
-                          },
-                    child: WalletAmountTypeCardWidget(
-                      icon: Images.paidBalanceIcon,
-                      amount: profileController.profileInfo?.paidAmount ?? 0,
-                      title: 'paid_amount'.tr,
-                      haveBorderColor:
-                          walletController.selectedHistoryIndex == 3
                               ? true
                               : false,
                     ),

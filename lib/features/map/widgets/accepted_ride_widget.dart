@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:just_the_tooltip/just_the_tooltip.dart';
 import 'package:ride_sharing_user_app/common_widgets/button_widget.dart';
@@ -45,6 +46,23 @@ class _AcceptedRiderWidgetState extends State<AcceptedRiderWidget> {
   Widget build(BuildContext context) {
     return GetBuilder<RiderMapController>(builder: (riderController) {
       return GetBuilder<RideController>(builder: (rideController) {
+        String firstRoute = '';
+        String secondRoute = '';
+        List<dynamic> extraRoute = [];
+        if (rideController.tripDetail != null) {
+          if (rideController.tripDetail!.intermediateAddresses != null &&
+              rideController.tripDetail!.intermediateAddresses != '[[, ]]') {
+            extraRoute =
+                jsonDecode(rideController.tripDetail!.intermediateAddresses!);
+            if (extraRoute.isNotEmpty) {
+              firstRoute = extraRoute[0];
+            }
+            if (extraRoute.isNotEmpty && extraRoute.length > 1) {
+              secondRoute = extraRoute[1];
+            }
+          }
+        }
+
         return currentState == 0
             ? rideController.tripDetail != null
                 ? _AcceptedTripWidget(callBack: () {
@@ -267,8 +285,26 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
 
   @override
   Widget build(BuildContext context) {
+    String firstRoute = '';
+    String secondRoute = '';
+
     return GetBuilder<RiderMapController>(builder: (riderController) {
       return GetBuilder<RideController>(builder: (rideController) {
+        List<dynamic> extraRoute = [];
+        if (rideController.tripDetail != null) {
+          if (rideController.tripDetail!.intermediateAddresses != null &&
+              rideController.tripDetail!.intermediateAddresses != '[[, ]]') {
+            extraRoute =
+                jsonDecode(rideController.tripDetail!.intermediateAddresses!);
+            if (extraRoute.isNotEmpty) {
+              firstRoute = extraRoute[0];
+            }
+            if (extraRoute.isNotEmpty && extraRoute.length > 1) {
+              secondRoute = extraRoute[1];
+            }
+          }
+        }
+
         if (rideController.tripDetail!.estimatedDistance
             .toString()
             .contains("km")) {
@@ -428,6 +464,9 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                 pickupAddress: rideController.tripDetail?.pickupAddress ?? '',
                 destinationAddress:
                     rideController.tripDetail?.destinationAddress ?? '',
+                extraOne: firstRoute,
+                extraTwo: secondRoute,
+                entrance: rideController.tripDetail?.entrance ?? '',
               ),
             ),
             const SizedBox(height: Dimensions.paddingSizeDefault),

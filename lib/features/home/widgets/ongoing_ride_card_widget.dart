@@ -84,9 +84,12 @@ class OngoingRideCardWidget extends StatelessWidget {
                             padding: const EdgeInsets.only(
                                 top: Dimensions.paddingSizeSmall),
                             child: Column(children: [
-                              Text('$tripDate $suffix',
+                              Text('$tripDate',
                                   style: textBold.copyWith(
                                       fontSize: Dimensions.fontSizeLarge)),
+                              // Text('$tripDate $suffix',
+                              //     style: textBold.copyWith(
+                              //         fontSize: Dimensions.fontSizeLarge)),
                               Text(
                                   DateConverter.dateTimeStringToMonthAndYear(
                                       rideController

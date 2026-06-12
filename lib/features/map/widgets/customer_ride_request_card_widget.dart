@@ -768,21 +768,103 @@ class _CommonDesignPart extends StatelessWidget {
   final TripDetail rideRequest;
   const _CommonDesignPart({required this.rideRequest});
 
-  @override
-  Widget build(BuildContext context) {
-    String firstRoute = '';
-    String secondRoute = '';
-    List<dynamic> extraRoute = [];
-    if (rideRequest.intermediateAddresses != null &&
-        rideRequest.intermediateAddresses != '[[, ]]') {
-      extraRoute = jsonDecode(rideRequest.intermediateAddresses!);
-      if (extraRoute.isNotEmpty) {
-        firstRoute = extraRoute[0];
+  List<String> _extractStops(String? raw, String? rawCoordinates) {
+    if (raw == null || raw.trim().isEmpty || raw.trim() == '[[, ]]') {
+      if (rawCoordinates != null && rawCoordinates.trim().isNotEmpty) {
+        try {
+          dynamic decodedCoordinates = jsonDecode(rawCoordinates);
+          if (decodedCoordinates is String) {
+            decodedCoordinates = jsonDecode(decodedCoordinates);
+          }
+          if (decodedCoordinates is List) {
+            final fallbackStops = <String>[];
+            for (var i = 0; i < decodedCoordinates.length; i++) {
+              fallbackStops.add('Arret ${i + 1}');
+            }
+            return fallbackStops;
+          }
+        } catch (_) {
+          // Ignore fallback parse errors.
+        }
       }
-      if (extraRoute.isNotEmpty && extraRoute.length > 1) {
-        secondRoute = extraRoute[1];
+      return <String>[];
+    }
+
+    try {
+      dynamic decoded = jsonDecode(raw);
+
+      // Some payloads arrive as encoded JSON string, decode one more time.
+      if (decoded is String) {
+        decoded = jsonDecode(decoded);
+      }
+
+      if (decoded is List) {
+        final List<String> stops = <String>[];
+        for (final item in decoded) {
+          if (item is String && item.trim().isNotEmpty) {
+            stops.add(item.trim());
+            continue;
+          }
+          if (item is Map) {
+            final dynamic label =
+                item['address'] ?? item['name'] ?? item['label'];
+            if (label != null && label.toString().trim().isNotEmpty) {
+              stops.add(label.toString().trim());
+            }
+          }
+        }
+        return stops;
+      }
+    } catch (_) {
+      // Fallback below
+    }
+
+    final cleaned =
+        raw.replaceAll('[', '').replaceAll(']', '').replaceAll('"', '').trim();
+    if (cleaned.isEmpty) {
+      return <String>[];
+    }
+
+    final parsedFromAddress = cleaned
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (parsedFromAddress.isNotEmpty) {
+      return parsedFromAddress;
+    }
+
+    if (rawCoordinates != null && rawCoordinates.trim().isNotEmpty) {
+      try {
+        dynamic decodedCoordinates = jsonDecode(rawCoordinates);
+        if (decodedCoordinates is String) {
+          decodedCoordinates = jsonDecode(decodedCoordinates);
+        }
+        if (decodedCoordinates is List) {
+          final fallbackStops = <String>[];
+          for (var i = 0; i < decodedCoordinates.length; i++) {
+            fallbackStops.add('Arret ${i + 1}');
+          }
+          return fallbackStops;
+        }
+      } catch (_) {
+        // Ignore fallback parse errors.
       }
     }
+
+    return <String>[];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stops = _extractStops(
+      rideRequest.intermediateAddresses,
+      rideRequest.intermediateCoordinates,
+    );
+    final String firstRoute = stops.isNotEmpty ? stops[0] : '';
+    final String secondRoute = stops.length > 1 ? stops[1] : '';
+    final String thirdRoute = stops.length > 2 ? stops[2] : '';
 
     return Column(children: [
       Padding(
@@ -881,6 +963,7 @@ class _CommonDesignPart extends StatelessWidget {
         destinationAddress: rideRequest.destinationAddress!,
         extraOne: firstRoute,
         extraTwo: secondRoute,
+        extraThree: thirdRoute,
         entrance: rideRequest.entrance ?? '',
       ),
       if (rideRequest.customer != null)

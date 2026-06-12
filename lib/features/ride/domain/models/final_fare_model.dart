@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class FinalFareModel {
   String? responseCode;
   String? message;
@@ -184,7 +186,8 @@ class FinalFare {
         ? PickupCoordinates.fromJson(json['customer_request_coordinates'])
         : null;
 
-    intermediateAddresses = json['intermediate_addresses'];
+    intermediateAddresses =
+        _normalizeJsonLikeValue(json['intermediate_addresses']);
     if (json['idle_fee'] != null) {
       idleFee = json['idle_fee'].toDouble();
     }
@@ -228,6 +231,18 @@ class FinalFare {
     rideStartTime = json['ride_start_time'];
     parcelStartTime = json['parcel_start_time'];
     parcelCompleteTime = json['parcel_complete_time'];
+  }
+
+  static String? _normalizeJsonLikeValue(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    if (value is List || value is Map<String, dynamic>) {
+      return jsonEncode(value);
+    }
+    if (value is Map) {
+      return jsonEncode(Map<String, dynamic>.from(value));
+    }
+    return value.toString();
   }
 }
 

@@ -3,12 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:ride_sharing_user_app/features/location/domain/services/location_service_interface.dart';
+import 'package:ride_sharing_user_app/helper/display_helper.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
 import 'package:ride_sharing_user_app/features/auth/controllers/auth_controller.dart';
 import 'package:ride_sharing_user_app/features/location/domain/models/zone_response.dart';
 import 'package:ride_sharing_user_app/features/map/controllers/map_controller.dart';
-import 'package:ride_sharing_user_app/common_widgets/confirmation_dialog_widget.dart';
 
 class LocationController extends GetxController implements GetxService {
   final LocationServiceInterface locationServiceInterface;
@@ -168,25 +169,23 @@ class LocationController extends GetxController implements GetxService {
     LocationPermission permission = await Geolocator.checkPermission();
     debugPrint('[MAP_DEBUG] Permission GPS actuelle: $permission');
 
-    if (GetPlatform.isIOS) {
-      await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
     }
 
-    if (permission == LocationPermission.always) {
+    if (permission == LocationPermission.whileInUse) {
+      final PermissionStatus alwaysStatus =
+          await Permission.locationAlways.request();
+      if (alwaysStatus.isGranted) {
+        permission = LocationPermission.always;
+      }
+    }
+
+    if (permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse) {
       return true;
     } else {
-      Get.dialog(
-        ConfirmationDialogWidget(
-          description: 'you_have_to_allow'.tr,
-          fromOpenLocation: true,
-          onYesPressed: () async {
-            await Geolocator.openAppSettings();
-            Get.back();
-          },
-          icon: Images.logo,
-        ),
-        barrierDismissible: false,
-      );
+      showCustomSnackBar('you_have_to_allow'.tr);
       return false;
     }
   }

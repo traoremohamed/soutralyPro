@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
@@ -13,114 +11,131 @@ class RouteWidget extends StatelessWidget {
   final String destinationAddress;
   final String? extraOne;
   final String? extraTwo;
+  final String? extraThree;
   final String? entrance;
   final bool fromCard;
-  const RouteWidget({super.key,
-    required this.pickupAddress,
-    required this.destinationAddress,
-    this.extraOne, this.extraTwo,
-    this.entrance,
-    this.fromCard = false});
+  const RouteWidget(
+      {super.key,
+      required this.pickupAddress,
+      required this.destinationAddress,
+      this.extraOne,
+      this.extraTwo,
+      this.extraThree,
+      this.entrance,
+      this.fromCard = false});
 
   @override
   Widget build(BuildContext context) {
+    final List<String> stops = <String>[
+      if (extraOne != null && extraOne!.isNotEmpty) extraOne!,
+      if (extraTwo != null && extraTwo!.isNotEmpty) extraTwo!,
+      if (extraThree != null && extraThree!.isNotEmpty) extraThree!,
+    ];
+
+    final List<String> labels = <String>[
+      pickupAddress,
+      ...stops,
+      destinationAddress
+    ];
+    final int destinationIndex = labels.length - 1;
+    final double connectorHeight = fromCard ? 18 : 22;
+
     return GetBuilder<RideController>(builder: (riderController) {
-      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Dimensions.paddingSizeExtraSmall),
-          child: Column(children:  [
-            SizedBox(width: Dimensions.iconSizeMedium,child: Image.asset(
-              Images.currentLocation,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
-            )),
-
-            if((extraOne != null && extraOne!.isNotEmpty) || (extraTwo != null && extraTwo!.isNotEmpty))
-              SizedBox(height: 65 ,width: 10,child: DividerWidget(
-                height: 2,dashWidth: 1,axis: Axis.vertical,
-                color: Theme.of(context).textTheme.bodyMedium!.color!,
-              )),
-
-            if((extraOne != null && extraOne!.isNotEmpty) || (extraTwo != null && extraTwo!.isNotEmpty))
-              SizedBox(width: Dimensions.iconSizeMedium,child: Image.asset(
-                Images.customerRouteIcon,
-                color: Theme.of(context).textTheme.bodyMedium?.color,
-              )),
-
-            SizedBox(height: 65 ,width: 10,child: DividerWidget(
-              height: 2,dashWidth: 1,axis: Axis.vertical,
-              color: Theme.of(context).textTheme.bodyMedium!.color!,
-            )),
-
-            SizedBox(width: Dimensions.iconSizeMedium,child: Image.asset(
-              Images.customerDestinationIcon,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
-            )),
-          ]),
-        ),
-
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(height: 40, child: Text(
-            pickupAddress,
-            style: textRegular.copyWith(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7)),
-            maxLines: 2,overflow: TextOverflow.ellipsis,
-          )),
-          const SizedBox(height: Dimensions.paddingSizeExtraLarge),
-
-          if(extraOne != null && extraOne!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: Dimensions.paddingSizeSmall),
-              child: Text(extraOne!, style: textRegular.copyWith(
-                color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                fontSize: Dimensions.fontSizeSmall,
-              ),overflow: TextOverflow.ellipsis),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < labels.length; i++) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Dimensions.paddingSizeExtraSmall,
+                  ),
+                  child: SizedBox(
+                    width: Dimensions.iconSizeMedium,
+                    child: Image.asset(
+                      i == 0
+                          ? Images.currentLocation
+                          : (i == destinationIndex
+                              ? Images.customerDestinationIcon
+                              : Images.customerRouteIcon),
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: i == 0 ? 0 : Dimensions.paddingSizeSmall,
+                      top: i == destinationIndex && i > 0
+                          ? (fromCard
+                              ? Dimensions.paddingSizeSmall
+                              : Dimensions.paddingSizeLarge)
+                          : 0,
+                    ),
+                    child: Text(
+                      labels[i],
+                      style: textRegular.copyWith(
+                        color: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.color
+                            ?.withValues(alpha: 0.7),
+                        fontSize: i == 0 || i == destinationIndex
+                            ? Dimensions.fontSizeDefault
+                            : Dimensions.fontSizeSmall,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
             ),
-
-          if((extraOne != null && extraOne!.isNotEmpty) || (extraTwo != null && extraTwo!.isNotEmpty))
-            const Padding(
-              padding: EdgeInsets.only(left: Dimensions.paddingSizeExtraSmall),
-              child: SizedBox(
-                height:20 ,width: 10,
-                child: DividerWidget(height: 2,dashWidth: 1,axis: Axis.vertical),
+            if (i != destinationIndex)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Dimensions.paddingSizeExtraSmall,
+                ),
+                child: SizedBox(
+                  width: Dimensions.iconSizeMedium,
+                  child: Center(
+                    child: SizedBox(
+                      height: connectorHeight,
+                      width: 10,
+                      child: DividerWidget(
+                        height: 2,
+                        dashWidth: 1,
+                        axis: Axis.vertical,
+                        color: Theme.of(context).textTheme.bodyMedium!.color!,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-
-          if(extraTwo != null && extraOne!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: Dimensions.paddingSizeSmall),
-              child: Text(extraTwo!, style: textRegular.copyWith(
-                color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                fontSize: Dimensions.fontSizeSmall,
-              ),overflow: TextOverflow.ellipsis),
-            ),
-
-          if(extraOne != null || extraTwo != null)
-            const SizedBox(height: Dimensions.paddingSizeSmall),
-
-          Padding(
-            padding: EdgeInsets.only(
-              top: fromCard ? Dimensions.paddingSizeSmall : Dimensions.paddingSizeLarge,
-            ),
-            child: Text(destinationAddress,  style: textRegular.copyWith(color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7))),
-          ),
-
-          if(entrance != null && entrance!.isNotEmpty)
+          ],
+          if (entrance != null && entrance!.isNotEmpty)
             Divider(color: Theme.of(context).hintColor),
-
-          if(entrance != null && entrance!.isNotEmpty)
+          if (entrance != null && entrance!.isNotEmpty)
             Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
               SizedBox(height: 25, child: Image.asset(Images.curvedArrow)),
               const SizedBox(width: Dimensions.paddingSizeSmall),
-
               Container(
                 transform: Matrix4.translationValues(0, 10, 0),
-                child: Text(entrance!, style: textRegular.copyWith(
-                  color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
-                  fontSize: Dimensions.fontSizeDefault,
-                )),
+                child: Text(entrance!,
+                    style: textRegular.copyWith(
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.color
+                          ?.withValues(alpha: 0.7),
+                      fontSize: Dimensions.fontSizeDefault,
+                    )),
               ),
             ]),
-        ])),
-      ]);
+        ],
+      );
     });
   }
 }

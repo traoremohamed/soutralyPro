@@ -44,6 +44,7 @@ class Transaction {
   String? attributeId;
   String? status;
   String? paymentMethod;
+  String? reference;
   String? paymentNumber;
   String? errorMessage;
   double? debit;
@@ -61,6 +62,7 @@ class Transaction {
       this.attributeId,
       this.status,
       this.paymentMethod,
+      this.reference,
       this.paymentNumber,
       this.errorMessage,
       this.debit,
@@ -78,6 +80,7 @@ class Transaction {
     attributeId = json['attribute_id'];
     status = json['status']?.toString();
     paymentMethod = json['payment_method']?.toString();
+    reference = json['reference']?.toString();
     paymentNumber = json['payment_number']?.toString();
     errorMessage = json['error_message']?.toString();
     debit = json['debit'] == null ? 0 : (json['debit'] as num).toDouble();

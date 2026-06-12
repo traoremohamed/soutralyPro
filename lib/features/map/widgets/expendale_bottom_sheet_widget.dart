@@ -93,12 +93,12 @@ class RiderBottomSheetWidget extends StatelessWidget {
                                           isUpdate: true);
                                     },
                                   ),
-                            CustomIconCardWidget(
-                              title: 'leader_board'.tr,
-                              icon: Images.mIcon2,
-                              onTap: () =>
-                                  Get.to(() => const LeaderboardScreen()),
-                            ),
+                            // CustomIconCardWidget(
+                            //   title: 'leader_board'.tr,
+                            //   icon: Images.mIcon2,
+                            //   onTap: () =>
+                            //       Get.to(() => const LeaderboardScreen()),
+                            // ),
                             CustomIconCardWidget(
                               title: 'trip_request'.tr,
                               icon: Images.mIcon1,
