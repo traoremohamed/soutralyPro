@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:just_the_tooltip/just_the_tooltip.dart';
 import 'package:ride_sharing_user_app/common_widgets/expandable_bottom_sheet.dart';
+import 'package:ride_sharing_user_app/features/profile/controllers/profile_controller.dart';
 import 'package:ride_sharing_user_app/features/profile/screens/profile_screen.dart';
 import 'package:ride_sharing_user_app/features/ride/domain/models/trip_details_model.dart';
 import 'package:ride_sharing_user_app/features/safety_setup/controllers/safety_alert_controller.dart';
@@ -40,6 +41,10 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    final ProfileController profileController = Get.find<ProfileController>();
+    if (profileController.isWalletBlockedForTripActions) {
+      profileController.checkZeroWalletPopup(forceShow: true);
+    }
     WidgetsBinding.instance.addObserver(this);
     _findingCurrentRoute();
   }
@@ -48,24 +53,33 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     debugPrint('[MAP_DEBUG] _findingCurrentRoute() démarré');
     debugPrint(
         '[MAP_DEBUG] currentRideState = ${Get.find<RiderMapController>().currentRideState}');
-    Get.find<RideController>().updateRoute(false, notify: false);
-    Get.find<RiderMapController>().setSheetHeight(
-        Get.find<RiderMapController>().currentRideState == RideState.initial
-            ? 300
-            : 270,
-        false);
-    Get.find<RideController>().getPendingRideRequestList(1);
-    if (Get.find<RiderMapController>().currentRideState != RideState.initial &&
-        (Get.find<RideController>().tripDetail?.id?.isNotEmpty ?? false)) {
+    final RideController rideController = Get.find<RideController>();
+    final RiderMapController riderMapController = Get.find<RiderMapController>();
+    final bool hasActiveTripId = rideController.tripDetail?.id?.isNotEmpty ?? false;
+
+    if (riderMapController.currentRideState != RideState.initial &&
+        !hasActiveTripId) {
       debugPrint(
-          '[MAP_DEBUG] Appel remainingDistance pour tripId=${Get.find<RideController>().tripDetail!.id}');
-      Get.find<RideController>().remainingDistance(
-        Get.find<RideController>().tripDetail!.id!,
+          '[MAP_DEBUG] Etat non-initial sans trip actif detecte, retour a RideState.initial');
+      riderMapController.setRideCurrentState(RideState.initial, notify: false);
+    }
+
+    rideController.updateRoute(false, notify: false);
+    riderMapController.setSheetHeight(
+        riderMapController.currentRideState == RideState.initial ? 300 : 270,
+        false);
+    rideController.getPendingRideRequestList(1);
+    if (riderMapController.currentRideState != RideState.initial &&
+        hasActiveTripId) {
+      debugPrint(
+          '[MAP_DEBUG] Appel remainingDistance pour tripId=${rideController.tripDetail!.id}');
+      rideController.remainingDistance(
+        rideController.tripDetail!.id!,
         mapBound: true,
       );
     } else {
       debugPrint('[MAP_DEBUG] Appel setMarkersInitialPosition()');
-      Get.find<RiderMapController>().setMarkersInitialPosition();
+      riderMapController.setMarkersInitialPosition();
     }
     getCurrentLocation();
   }
@@ -196,11 +210,16 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                   return Stack(children: [
                     Padding(
                       padding: EdgeInsets.only(
-                        bottom: riderMapController.sheetHeight -
-                            (Get.find<RiderMapController>().currentRideState ==
-                                    RideState.initial
-                                ? 80
-                                : 20),
+                        bottom: (() {
+                          final double rawBottom =
+                              riderMapController.sheetHeight -
+                                  (Get.find<RiderMapController>()
+                                              .currentRideState ==
+                                          RideState.initial
+                                      ? 80.0
+                                      : 20.0);
+                          return rawBottom < 0 ? 0.0 : rawBottom;
+                        })(),
                       ),
                       child: GoogleMap(
                         style: Get.isDarkMode
@@ -228,6 +247,9 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                           riderMapController.mapController = controller;
                           if (riderMapController.currentRideState.name !=
                               'initial') {
+                            final RideController rideController =
+                                Get.find<RideController>();
+                            final String? tripId = rideController.tripDetail?.id;
                             if (riderMapController.currentRideState.name ==
                                     RideState.pending.name ||
                                 riderMapController.currentRideState.name ==
@@ -236,9 +258,16 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                                     AppConstants.outForPickup ||
                                 riderMapController.currentRideState.name ==
                                     AppConstants.ongoing) {
-                              Get.find<RideController>().remainingDistance(
-                                  Get.find<RideController>().tripDetail!.id!,
-                                  mapBound: true);
+                              if (tripId != null && tripId.isNotEmpty) {
+                                rideController.remainingDistance(
+                                  tripId,
+                                  mapBound: true,
+                                );
+                              } else {
+                                debugPrint(
+                                  '[MAP_DEBUG] tripDetail.id est nul dans onMapCreated, remainingDistance ignore.',
+                                );
+                              }
                             } else {
                               riderMapController
                                   .getPickupToDestinationPolyline();
@@ -457,37 +486,51 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   }
 
   void _onHorizontalDrag(DragEndDetails details) {
-    if (details.primaryVelocity == 0)
+    if (details.primaryVelocity == 0) {
       return; // user have just tapped on screen (no dragging)
+    }
 
     if (details.primaryVelocity!.compareTo(0) == -1) {
     } else {}
   }
 
   void _setMapCurrentRoutes() async {
-    await Get.find<RideController>()
-        .getRideDetails(Get.find<RideController>().tripDetail?.id ?? '');
-    TripDetail? tripDetail = Get.find<RideController>().tripDetail;
+    final RideController rideController = Get.find<RideController>();
+    final RiderMapController riderMapController = Get.find<RiderMapController>();
+    final String? tripId = rideController.tripDetail?.id;
+
+    if (tripId == null || tripId.isEmpty) {
+      debugPrint(
+          '[MAP_DEBUG] _setMapCurrentRoutes ignore: aucun tripId actif, retour a initial');
+      riderMapController.setRideCurrentState(RideState.initial);
+      rideController.getPendingRideRequestList(1, isUpdate: true);
+      return;
+    }
+
+    await rideController.getRideDetails(tripId);
+    TripDetail? tripDetail = rideController.tripDetail;
     if (tripDetail?.currentStatus == AppConstants.accepted ||
         tripDetail?.currentStatus == AppConstants.outForPickup) {
       if (tripDetail?.currentStatus == AppConstants.outForPickup) {
-        Get.find<RiderMapController>()
-            .setRideCurrentState(RideState.outForPickup);
+        riderMapController.setRideCurrentState(RideState.outForPickup);
       } else {
-        Get.find<RiderMapController>().setRideCurrentState(RideState.accepted);
+        riderMapController.setRideCurrentState(RideState.accepted);
       }
-      Get.find<RideController>().updateRoute(false, notify: true);
-      Get.find<RiderMapController>().setMarkersInitialPosition();
+      rideController.updateRoute(false, notify: true);
+      riderMapController.setMarkersInitialPosition();
     } else if (tripDetail?.currentStatus == AppConstants.ongoing) {
-      Get.find<RiderMapController>().setRideCurrentState(RideState.ongoing);
-      Get.find<RideController>().updateRoute(false, notify: true);
-      Get.find<RiderMapController>().setMarkersInitialPosition();
+      riderMapController.setRideCurrentState(RideState.ongoing);
+      rideController.updateRoute(false, notify: true);
+      riderMapController.setMarkersInitialPosition();
     } else if (tripDetail?.currentStatus == AppConstants.completed &&
         tripDetail?.paymentStatus == AppConstants.unPaid) {
-      Get.find<RideController>().getFinalFare(tripDetail!.id!);
+      rideController.getFinalFare(tripDetail!.id!);
       Get.offAll(() => const PaymentReceivedScreen());
     } else if (tripDetail?.currentStatus == AppConstants.cancelled) {
       Get.offAll(() => const DashboardScreen());
+    } else {
+      riderMapController.setRideCurrentState(RideState.initial);
+      rideController.getPendingRideRequestList(1, isUpdate: true);
     }
   }
 

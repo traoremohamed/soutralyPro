@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/common_widgets/payment_item_info_widget.dart';
 import 'package:ride_sharing_user_app/features/ride/domain/models/trip_details_model.dart';
+import 'package:ride_sharing_user_app/helper/date_converter.dart';
 import 'package:ride_sharing_user_app/helper/dynamic_translation_helper.dart';
 import 'package:ride_sharing_user_app/helper/price_converter.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
@@ -12,10 +13,26 @@ class PaymentDetailsWidget extends StatelessWidget {
   final TripDetail? tripDetail;
   const PaymentDetailsWidget({super.key, required this.tripDetail});
 
+  double _toDouble(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final waitingMinutes = _toDouble(tripDetail?.waitingTime);
+    final idleMinutes = _toDouble(tripDetail?.idleTime);
+    final totalWaitingMinutes = waitingMinutes + idleMinutes;
+
+    final waitingFeeAmount = _toDouble(tripDetail?.waitingFee);
+    final idleFeeAmount = _toDouble(tripDetail?.idleFee);
+    final delayFeeAmount = _toDouble(tripDetail?.delayFee);
+    final totalWaitingFeeAmount =
+        waitingFeeAmount + idleFeeAmount + delayFeeAmount;
+
     final subtotalAmount = (tripDetail?.distanceWiseFare ?? 0) +
-        (tripDetail?.type != 'parcel' ? (tripDetail?.waitingFee ?? 0) : 0);
+        (tripDetail?.type != 'parcel' ? totalWaitingFeeAmount : 0);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -61,9 +78,8 @@ class PaymentDetailsWidget extends StatelessWidget {
         if (tripDetail?.type != 'parcel')
           PaymentItemInfoWidget(
             icon: Images.waitingPrice,
-            title:
-                '${'waiting_fee'.tr} (${((double.tryParse((tripDetail?.waitingTime ?? '0').toString()) ?? 0)).toStringAsFixed(2)} min)',
-            amount: tripDetail?.waitingFee ?? 0,
+            title: '${'waiting_fee'.tr} (${DateConverter.formatDurationHmsFromMinutes(totalWaitingMinutes)})',
+            amount: totalWaitingFeeAmount,
             payableRounded: true,
           ),
         /*

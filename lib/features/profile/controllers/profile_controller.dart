@@ -14,8 +14,8 @@ import 'package:ride_sharing_user_app/features/map/controllers/map_controller.da
 import 'package:ride_sharing_user_app/features/profile/domain/models/level_model.dart';
 import 'package:ride_sharing_user_app/features/profile/domain/services/profile_service_interface.dart';
 import 'package:ride_sharing_user_app/features/wallet/widgets/payment_method_bottomsheet_widget.dart';
-import 'package:ride_sharing_user_app/features/wallet/widgets/recharge_bottom_sheet_widget.dart';
 import 'package:ride_sharing_user_app/features/wallet/screens/digital_payment_screen.dart';
+import 'package:ride_sharing_user_app/features/wallet/screens/wallet_screen.dart';
 import 'package:ride_sharing_user_app/features/wallet/screens/wave_recharge_page.dart';
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/helper/display_helper.dart';
@@ -59,6 +59,10 @@ class ProfileController extends GetxController implements GetxService {
   bool isCashInHandWarningShow = false;
   bool isCashInHandHoldAccount = false;
   bool _hasShownZeroWalletPopup = false;
+  bool _zeroWalletPopupDismissedByUser = false;
+  DateTime? _lastZeroWalletPopupAt;
+
+  static const Duration _zeroWalletPopupCooldown = Duration(seconds: 4);
 
   void updateFirstTimeShowBottomSheet(bool status) {
     isFirstTimeShowBottomSheet = status;
@@ -753,24 +757,6 @@ class ProfileController extends GetxController implements GetxService {
     }
   }
 
-  bool _isValidPrioritySelection(List<Category> categories) {
-    if (categories.length <= 1) {
-      return true;
-    }
-
-    final List<int> priorities = categories
-        .map((category) => category.ordrePriorite ?? 0)
-        .where((priority) => priority > 0)
-        .toList()
-      ..sort();
-
-    if (priorities.length != categories.length) {
-      return false;
-    }
-
-    return priorities.last - priorities.first + 1 == priorities.length;
-  }
-
   DateTime? _startDate;
   DateTime? _endDate;
   final DateFormat _dateFormat = DateFormat('yyyy-MM-d');
@@ -979,13 +965,28 @@ class ProfileController extends GetxController implements GetxService {
     }
   }
 
-  void checkZeroWalletPopup() {
-    final double walletBalance = profileInfo?.wallet?.walletBalance ?? 0;
-    if (walletBalance > 0) {
+  void checkZeroWalletPopup({bool forceShow = false}) {
+    if (!isWalletBlockedForTripActions) {
       _hasShownZeroWalletPopup = false;
+      _zeroWalletPopupDismissedByUser = false;
+      _lastZeroWalletPopupAt = null;
       return;
     }
-    if (_hasShownZeroWalletPopup) {
+
+    final now = DateTime.now();
+    if (_lastZeroWalletPopupAt != null &&
+        now.difference(_lastZeroWalletPopupAt!) < _zeroWalletPopupCooldown) {
+      return;
+    }
+
+    if (forceShow) {
+      _zeroWalletPopupDismissedByUser = false;
+      _hasShownZeroWalletPopup = false;
+    }
+    if (_zeroWalletPopupDismissedByUser) {
+      return;
+    }
+    if (_hasShownZeroWalletPopup && (Get.isDialogOpen ?? false)) {
       return;
     }
     if (Get.context == null) {
@@ -993,30 +994,74 @@ class ProfileController extends GetxController implements GetxService {
     }
 
     _hasShownZeroWalletPopup = true;
-    Get.dialog(
-      AlertDialog(
-        title: Text('wallet_recharge_required_title'.tr),
-        content: Text('wallet_recharge_required_message'.tr),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('close'.tr),
+    _lastZeroWalletPopupAt = now;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Get.context == null) {
+        _hasShownZeroWalletPopup = false;
+        return;
+      }
+      if (Get.isDialogOpen ?? false) {
+        return;
+      }
+
+      Get.dialog(
+        PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: Text('insufficient_wallet_balance_title'.tr),
+            content: Text('insufficient_wallet_balance_for_trip'.tr),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  _zeroWalletPopupDismissedByUser = true;
+                  Get.back();
+                },
+                child: Text('close'.tr),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  _zeroWalletPopupDismissedByUser = true;
+                  Get.back();
+                  Get.to(() => WalletScreen());
+                },
+                child: Text('wallet'.tr),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              Get.bottomSheet(
-                const RechargeBottomSheetWidget(),
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-              );
-            },
-            child: Text('recharge'.tr),
-          ),
-        ],
-      ),
-      barrierDismissible: false,
-    );
+        ),
+        barrierDismissible: false,
+      );
+    });
+  }
+
+  bool get isForfaitCurrentlyActive {
+    final String mode = (driverPricingMode).toLowerCase();
+    if (mode != 'forfait') {
+      return false;
+    }
+
+    final expiry = DateTime.tryParse(forfaitExpiresAt ?? '');
+    if (expiry == null) {
+      return false;
+    }
+
+    return expiry.toLocal().isAfter(DateTime.now());
+  }
+
+  bool get isWalletBlockedForTripActions {
+    final bool isProfileValidated =
+        profileInfo?.isOldIdentificationImage != true;
+    final bool hasApprovedVehicle = profileInfo?.vehicle != null &&
+        profileInfo?.vehicle?.vehicleRequestStatus == 'approved' &&
+        profileInfo?.vehicle?.isActive == 1;
+    final double walletBalance = profileInfo?.wallet?.walletBalance ?? 0;
+    final bool forfaitActive = isForfaitCurrentlyActive;
+
+    return isProfileValidated &&
+        hasApprovedVehicle &&
+        walletBalance <= 0 &&
+        !forfaitActive;
   }
 
   void removeCashInHandWarnings() {

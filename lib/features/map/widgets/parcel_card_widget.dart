@@ -32,6 +32,7 @@ class ParcelRequestCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     String firstRoute = '';
     String secondRoute = '';
+    String thirdRoute = '';
     List<dynamic> extraRoute = [];
     if (rideRequest.intermediateAddresses != null &&
         rideRequest.intermediateAddresses != '[[, ]]') {
@@ -41,6 +42,9 @@ class ParcelRequestCardWidget extends StatelessWidget {
       }
       if (extraRoute.isNotEmpty && extraRoute.length > 1) {
         secondRoute = extraRoute[1];
+      }
+      if (extraRoute.isNotEmpty && extraRoute.length > 2) {
+        thirdRoute = extraRoute[2];
       }
     }
 
@@ -147,8 +151,10 @@ class ParcelRequestCardWidget extends StatelessWidget {
                 fromCard: true,
                 pickupAddress: rideRequest.pickupAddress!,
                 destinationAddress: rideRequest.destinationAddress!,
+                hideDestination: rideRequest.currentStatus != 'ongoing',
                 extraOne: firstRoute,
                 extraTwo: secondRoute,
+                extraThree: thirdRoute,
                 entrance: rideRequest.entrance ?? '',
               ),
               if (rideRequest.customer != null)

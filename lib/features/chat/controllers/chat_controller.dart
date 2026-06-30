@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_use_of_protected_member
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';

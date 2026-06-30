@@ -58,25 +58,39 @@ class VehicleBody {
 
   Map<String, String> toJson() {
     final Map<String, String> data = <String, String>{};
-    if (brandId != null) data['brand_id'] = brandId!;
-    if (modelId != null) data['model_id'] = modelId!;
-    if (categoryId != null) data['category_id'] = categoryId!;
+    if (brandId != null) {
+      data['brand_id'] = brandId!;
+    }
+    if (modelId != null) {
+      data['model_id'] = modelId!;
+    }
+    if (categoryId != null) {
+      data['category_id'] = categoryId!;
+    }
     if (categoryIds != null && categoryIds!.isNotEmpty) {
       data['category_ids'] = categoryIds!.join(',');
     }
-    if (licencePlateNumber != null)
+    if (licencePlateNumber != null) {
       data['licence_plate_number'] = licencePlateNumber!;
-    if (licenceExpireDate != null)
+    }
+    if (licenceExpireDate != null) {
       data['licence_expire_date'] = licenceExpireDate!;
-    if (vinNumber != null && vinNumber!.isNotEmpty)
+    }
+    if (vinNumber != null && vinNumber!.isNotEmpty) {
       data['vin_number'] = vinNumber!;
-    if (transmission != null && transmission!.isNotEmpty)
+    }
+    if (transmission != null && transmission!.isNotEmpty) {
       data['transmission'] = transmission!;
-    if (fuelType != null && fuelType!.isNotEmpty) data['fuel_type'] = fuelType!;
-    if (vehicleYear != null && vehicleYear!.isNotEmpty)
+    }
+    if (fuelType != null && fuelType!.isNotEmpty) {
+      data['fuel_type'] = fuelType!;
+    }
+    if (vehicleYear != null && vehicleYear!.isNotEmpty) {
       data['vehicle_year'] = vehicleYear!;
-    if (vehicleColor != null && vehicleColor!.isNotEmpty)
+    }
+    if (vehicleColor != null && vehicleColor!.isNotEmpty) {
       data['vehicle_color'] = vehicleColor!;
+    }
     if (technicalInspectionExpiryDate != null &&
         technicalInspectionExpiryDate!.isNotEmpty) {
       data['technical_inspection_expiry_date'] = technicalInspectionExpiryDate!;
@@ -87,7 +101,9 @@ class VehicleBody {
     if (patenteExpiryDate != null && patenteExpiryDate!.isNotEmpty) {
       data['patente_expiry_date'] = patenteExpiryDate!;
     }
-    if (driverId != null) data['driver_id'] = driverId!;
+    if (driverId != null) {
+      data['driver_id'] = driverId!;
+    }
     if (ownership != null) data['ownership'] = ownership!;
     if (parcelCapacityWeight != null && parcelCapacityWeight!.isNotEmpty) {
       data['parcel_weight_capacity'] = parcelCapacityWeight!;

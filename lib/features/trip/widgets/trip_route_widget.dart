@@ -9,6 +9,7 @@ import 'package:ride_sharing_user_app/features/ride/controllers/ride_controller.
 class TripRouteWidget extends StatelessWidget {
   final String pickupAddress;
   final String destinationAddress;
+  final String? vehicleCategoryName;
   final String? extraOne;
   final String? extraTwo;
   final String? entrance;
@@ -17,6 +18,7 @@ class TripRouteWidget extends StatelessWidget {
       {super.key,
       required this.pickupAddress,
       required this.destinationAddress,
+      this.vehicleCategoryName,
       this.extraOne,
       this.extraTwo,
       this.entrance,
@@ -84,6 +86,30 @@ class TripRouteWidget extends StatelessWidget {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                if ((vehicleCategoryName ?? '').trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                        bottom: Dimensions.paddingSizeSmall),
+                    child: Row(
+                      children: [
+                        Icon(Icons.local_taxi,
+                            size: Dimensions.iconSizeSmall,
+                            color: Theme.of(context).primaryColor),
+                        const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                        Text(
+                          '${'vehicle_category'.tr}: ${vehicleCategoryName!.trim()}',
+                          style: textRegular.copyWith(
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.color
+                                ?.withValues(alpha: 0.8),
+                            fontSize: Dimensions.fontSizeSmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Text(pickupAddress,
                     style: textRegular.copyWith(
                         color: Theme.of(context).textTheme.bodyMedium?.color),

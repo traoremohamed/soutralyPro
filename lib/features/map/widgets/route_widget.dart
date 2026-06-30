@@ -9,6 +9,8 @@ import 'package:ride_sharing_user_app/common_widgets/divider_widget.dart';
 class RouteWidget extends StatelessWidget {
   final String pickupAddress;
   final String destinationAddress;
+  final String? vehicleCategoryName;
+  final bool hideDestination;
   final String? extraOne;
   final String? extraTwo;
   final String? extraThree;
@@ -18,6 +20,8 @@ class RouteWidget extends StatelessWidget {
       {super.key,
       required this.pickupAddress,
       required this.destinationAddress,
+      this.vehicleCategoryName,
+      this.hideDestination = false,
       this.extraOne,
       this.extraTwo,
       this.extraThree,
@@ -34,8 +38,8 @@ class RouteWidget extends StatelessWidget {
 
     final List<String> labels = <String>[
       pickupAddress,
-      ...stops,
-      destinationAddress
+      if (!hideDestination) ...stops,
+      if (!hideDestination) destinationAddress
     ];
     final int destinationIndex = labels.length - 1;
     final double connectorHeight = fromCard ? 18 : 22;
@@ -44,6 +48,30 @@ class RouteWidget extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if ((vehicleCategoryName ?? '').trim().isNotEmpty)
+            Padding(
+              padding:
+                  const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
+              child: Row(
+                children: [
+                  Icon(Icons.local_taxi,
+                      size: Dimensions.iconSizeSmall,
+                      color: Theme.of(context).primaryColor),
+                  const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                  Text(
+                    '${'vehicle_category'.tr}: ${vehicleCategoryName!.trim()}',
+                    style: textRegular.copyWith(
+                      color: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.color
+                          ?.withValues(alpha: 0.8),
+                      fontSize: Dimensions.fontSizeSmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           for (int i = 0; i < labels.length; i++) ...[
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,

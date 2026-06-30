@@ -58,15 +58,18 @@ class _PaymentItemInfoWidgetState extends State<PaymentItemInfoWidget> {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Text(
-              widget.title,
-              style: (widget.discount
-                      ? textBold
-                      : widget.icon != null
-                          ? textMedium
-                          : textBold)
-                  .copyWith(
-                      color: Theme.of(context).textTheme.bodyMedium?.color),
+            Flexible(
+              child: Text(
+                widget.title,
+                softWrap: true,
+                style: (widget.discount
+                        ? textBold
+                        : widget.icon != null
+                            ? textMedium
+                            : textBold)
+                    .copyWith(
+                        color: Theme.of(context).textTheme.bodyMedium?.color),
+              ),
             ),
             widget.toolTipText != null
                 ? JustTheTooltip(

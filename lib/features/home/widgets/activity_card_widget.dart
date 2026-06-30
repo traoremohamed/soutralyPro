@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:ride_sharing_user_app/helper/date_converter.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/styles.dart';
 
@@ -20,13 +21,7 @@ class MyActivityCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    int hour = 0, min = 0;
-    if (value >= 60) {
-      hour = (value / 60).floor();
-    }
-    min = ((value % 60)).floor();
-    final String formattedTime =
-        '${hour.toString().padLeft(2, '0')}:${min.toString().padLeft(2, '0')} h';
+    final String formattedTime = DateConverter.formatDurationHmsFromMinutes(value);
 
     return Padding(
       padding: const EdgeInsets.only(left: Dimensions.paddingSizeDefault),

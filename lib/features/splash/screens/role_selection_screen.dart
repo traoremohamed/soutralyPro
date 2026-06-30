@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({Key? key}) : super(key: key);
+  const RoleSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -27,11 +27,11 @@ class RoleSelectionScreen extends StatelessWidget {
                   // Naviguer vers la page de connexion pour partenaire
                   Navigator.of(context).pushReplacementNamed('/sign-in');
                 },
-                child: const Text('Vous êtes partenaire'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
                   textStyle: const TextStyle(fontSize: 18),
                 ),
+                child: const Text('Vous êtes partenaire'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -39,11 +39,11 @@ class RoleSelectionScreen extends StatelessWidget {
                   // Naviguer vers la page de connexion pour chauffeur
                   Navigator.of(context).pushReplacementNamed('/sign-in');
                 },
-                child: const Text('Vous êtes chauffeur'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
                   textStyle: const TextStyle(fontSize: 18),
                 ),
+                child: const Text('Vous êtes chauffeur'),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
@@ -51,11 +51,11 @@ class RoleSelectionScreen extends StatelessWidget {
                   // Naviguer vers la page de connexion pour livreur
                   Navigator.of(context).pushReplacementNamed('/sign-in');
                 },
-                child: const Text('Vous êtes livreur'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
                   textStyle: const TextStyle(fontSize: 18),
                 ),
+                child: const Text('Vous êtes livreur'),
               ),
             ],
           ),

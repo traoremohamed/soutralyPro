@@ -502,11 +502,6 @@ class _VehicleAddScreenState extends State<VehicleAddScreen> {
       showCustomSnackBar('L\'immatriculation est obligatoire');
       return false;
     }
-    if (licenceExpireDate == null) {
-      showCustomSnackBar(
-          'La date d\'expiration du permis de conduire est obligatoire');
-      return false;
-    }
     if (vehicleYear.isEmpty) {
       showCustomSnackBar('L\'annee du vehicule est obligatoire');
       return false;

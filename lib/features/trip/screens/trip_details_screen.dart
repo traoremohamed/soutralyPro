@@ -82,13 +82,7 @@ class _TripDetailsState extends State<TripDetails> {
         body: GetBuilder<RideController>(builder: (rideController) {
           String firstRoute = '';
           String secondRoute = '';
-          Duration? tripDuration;
           if (rideController.tripDetail != null) {
-            if (rideController.tripDetail!.actualTime != null) {
-              tripDuration = Duration(
-                  minutes: rideController.tripDetail!.actualTime!.ceil());
-            }
-
             List<dynamic> extraRoute = [];
             if (rideController.tripDetail!.intermediateAddresses != null &&
                 rideController.tripDetail!.intermediateAddresses != '[[, ]]') {
@@ -136,8 +130,10 @@ class _TripDetailsState extends State<TripDetails> {
                                   if (rideController.tripDetail!.actualTime !=
                                       null)
                                     SummeryItem(
-                                      title:
-                                          '${tripDuration!.inHours}:${tripDuration.inMinutes % 60} hr',
+                                      title: DateConverter
+                                          .formatDurationHmsFromMinutes(
+                                              rideController
+                                                  .tripDetail!.actualTime),
                                       subTitle: 'time'.tr,
                                     ),
                                   SummeryItem(
@@ -228,6 +224,8 @@ class _TripDetailsState extends State<TripDetails> {
                               destinationAddress: rideController
                                       .tripDetail?.destinationAddress ??
                                   '',
+                              vehicleCategoryName: rideController
+                                  .tripDetail?.vehicleCategory?.name,
                               extraOne: firstRoute,
                               extraTwo: secondRoute,
                               entrance: rideController.tripDetail?.entrance,

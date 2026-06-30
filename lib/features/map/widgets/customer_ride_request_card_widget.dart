@@ -862,6 +862,9 @@ class _CommonDesignPart extends StatelessWidget {
       rideRequest.intermediateAddresses,
       rideRequest.intermediateCoordinates,
     );
+    final bool isBeforeAcceptance =
+        (rideRequest.currentStatus ?? '').toLowerCase() == 'pending' ||
+            (rideRequest.currentStatus ?? '').trim().isEmpty;
     final String firstRoute = stops.isNotEmpty ? stops[0] : '';
     final String secondRoute = stops.length > 1 ? stops[1] : '';
     final String thirdRoute = stops.length > 2 ? stops[2] : '';
@@ -870,31 +873,67 @@ class _CommonDesignPart extends StatelessWidget {
       Padding(
         padding:
             const EdgeInsets.symmetric(vertical: Dimensions.paddingSizeDefault),
-        child:
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(
-            'trip_type'.tr,
-            style: textBold,
+        child: Row(children: [
+          Expanded(
+            child: Text(
+              'trip_type'.tr,
+              style: textBold,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           const SizedBox(width: Dimensions.paddingSizeExtraSmall),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Dimensions.paddingSizeSmall,
-              vertical: Dimensions.paddingSizeExtraSmall,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius:
-                  BorderRadius.circular(Dimensions.paddingSizeExtraSmall),
-            ),
-            child: Text(
-              rideRequest.type!.tr,
-              style:
-                  textRegular.copyWith(color: Theme.of(Get.context!).cardColor),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimensions.paddingSizeSmall,
+                vertical: Dimensions.paddingSizeExtraSmall,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainer,
+                borderRadius:
+                    BorderRadius.circular(Dimensions.paddingSizeExtraSmall),
+              ),
+              child: Text(
+                rideRequest.type!.tr,
+                maxLines: 2,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+                style: textRegular.copyWith(
+                    color: Theme.of(Get.context!).cardColor),
+              ),
             ),
           ),
         ]),
       ),
+      if ((rideRequest.vehicleCategory?.name ?? '').trim().isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: Dimensions.paddingSizeSmall),
+          child: Row(
+            children: [
+              Icon(Icons.local_taxi,
+                  size: Dimensions.iconSizeSmall,
+                  color: Theme.of(context).primaryColor),
+              const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+              Expanded(
+                child: Text(
+                  '${'vehicle_category'.tr}: ${rideRequest.vehicleCategory!.name!.trim()}',
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.ellipsis,
+                  style: textRegular.copyWith(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.8),
+                    fontSize: Dimensions.fontSizeSmall,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       if (rideRequest.type == 'scheduled_request')
         Container(
           decoration: BoxDecoration(
@@ -904,18 +943,30 @@ class _CommonDesignPart extends StatelessWidget {
                   .withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(Dimensions.paddingSizeSmall)),
           padding: EdgeInsets.all(Dimensions.paddingSizeSmall),
-          child:
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('pickup_date_time'.tr,
-                style:
-                    textRegular.copyWith(fontSize: Dimensions.fontSizeSmall)),
-            Text(
-                DateConverter.tripDetailsShowFormat(
-                    rideRequest.scheduledAt ?? ''),
-                style: textSemiBold.copyWith(
-                  fontSize: Dimensions.fontSizeSmall,
-                ))
-          ]),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text('pickup_date_time'.tr,
+                    style: textRegular.copyWith(
+                        fontSize: Dimensions.fontSizeSmall)),
+              ),
+              const SizedBox(width: Dimensions.paddingSizeSmall),
+              Flexible(
+                child: Text(
+                  DateConverter.tripDetailsShowFormat(
+                      rideRequest.scheduledAt ?? ''),
+                  textAlign: TextAlign.end,
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.ellipsis,
+                  style: textSemiBold.copyWith(
+                    fontSize: Dimensions.fontSizeSmall,
+                  ),
+                ),
+              ),
+            ],
+          ),
         )
       else
         Container(
@@ -926,32 +977,56 @@ class _CommonDesignPart extends StatelessWidget {
                   .withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(Dimensions.paddingSizeSmall)),
           padding: EdgeInsets.all(Dimensions.paddingSizeSmall),
-          child:
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Row(spacing: Dimensions.paddingSizeExtraSmall, children: [
-              Image.asset(Images.circularClockIcon, height: 12, width: 12),
-              Text('${rideRequest.estimatedTime} ${'min_away'.tr}',
-                  style:
-                      textRegular.copyWith(fontSize: Dimensions.fontSizeSmall))
-            ]),
-            Text(
-                '${'distance'.tr}: ${rideRequest.estimatedDistance?.toStringAsFixed(2)} Km',
-                style: textRegular.copyWith(
-                  color: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.color
-                      ?.withValues(alpha: 0.7),
-                  fontSize: Dimensions.fontSizeSmall,
-                ))
-          ]),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Image.asset(Images.circularClockIcon,
+                        height: 12, width: 12),
+                    const SizedBox(width: Dimensions.paddingSizeExtraSmall),
+                    Expanded(
+                      child: Text(
+                        '${DateConverter.formatDurationHmsFromMinutes(rideRequest.estimatedTime)} ${'from_now'.tr}',
+                        maxLines: 2,
+                        softWrap: true,
+                        overflow: TextOverflow.ellipsis,
+                        style: textRegular.copyWith(
+                            fontSize: Dimensions.fontSizeSmall),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: Dimensions.paddingSizeSmall),
+              Flexible(
+                child: Text(
+                  '${'distance'.tr}: ${rideRequest.estimatedDistance?.toStringAsFixed(2)} Km',
+                  textAlign: TextAlign.end,
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.ellipsis,
+                  style: textRegular.copyWith(
+                    color: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.color
+                        ?.withValues(alpha: 0.7),
+                    fontSize: Dimensions.fontSizeSmall,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       const SizedBox(height: Dimensions.paddingSizeSmall),
       if (rideRequest.type == 'scheduled_request' &&
-          (DateConverter.findTimeDifference(rideRequest.scheduledAt ?? '') >
+          (DateConverter.findTimeDifferenceInSeconds(
+                  rideRequest.scheduledAt ?? '') >
               0)) ...[
         Text(
-          '${'your_pickup_time_start'.tr} ${DateConverter.getMinutesToDayHourMinutes(DateConverter.findTimeDifference(rideRequest.scheduledAt ?? ''))} ${'from_now'.tr}',
+          '${'your_pickup_time_start'.tr} ${DateConverter.formatDurationHms(DateConverter.findTimeDifferenceInSeconds(rideRequest.scheduledAt ?? ''))} ${'from_now'.tr}',
           style: textRegular.copyWith(
               color: Theme.of(context).colorScheme.surfaceContainer),
         ),
@@ -960,7 +1035,9 @@ class _CommonDesignPart extends StatelessWidget {
       RouteWidget(
         fromCard: true,
         pickupAddress: rideRequest.pickupAddress!,
-        destinationAddress: rideRequest.destinationAddress!,
+        destinationAddress: rideRequest.destinationAddress ?? '',
+        hideDestination: isBeforeAcceptance,
+        vehicleCategoryName: rideRequest.vehicleCategory?.name,
         extraOne: firstRoute,
         extraTwo: secondRoute,
         extraThree: thirdRoute,
@@ -969,6 +1046,7 @@ class _CommonDesignPart extends StatelessWidget {
       if (rideRequest.customer != null)
         CustomerInfoWidget(
           fromTripDetails: false,
+          showEstimatedFare: !isBeforeAcceptance,
           customer: rideRequest.customer!,
           fare: Get.find<RideController>()
               .getDisplayFareFromTripDetail(rideRequest)

@@ -53,6 +53,7 @@ class FinalFare {
   String? intermediateAddresses;
   double? idleFee;
   double? delayFee;
+  double? waitingFee;
   double? cancellationFee;
   String? cancelledBy;
   double? vatTax;
@@ -103,6 +104,7 @@ class FinalFare {
       this.intermediateAddresses,
       this.idleFee,
       this.delayFee,
+      this.waitingFee,
       this.cancellationFee,
       this.cancelledBy,
       this.vatTax,
@@ -193,6 +195,9 @@ class FinalFare {
     }
     if (json['delay_fee'] != null) {
       delayFee = json['delay_fee'].toDouble();
+    }
+    if (json['waiting_fee'] != null) {
+      waitingFee = json['waiting_fee'].toDouble();
     }
     if (json['cancellation_fee'] != null) {
       cancellationFee = json['cancellation_fee'].toDouble();

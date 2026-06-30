@@ -1,3 +1,5 @@
+// ignore_for_file: invalid_use_of_protected_member
+
 import 'dart:convert';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'package:flutter/foundation.dart';
@@ -68,7 +70,7 @@ class PusherHelper {
 
   static int _resolveWsPort() {
     final rawPort = Get.find<SplashController>().config?.webSocketPort;
-    return int.tryParse('${rawPort ?? ''}') ?? 6001;
+    return int.tryParse((rawPort ?? '').toString()) ?? 6001;
   }
 
   static Uri _resolveAuthEndpoint() {

@@ -92,8 +92,7 @@ class _ProfileDetailsWidgetState extends State<ProfileDetailsWidget> {
           ]),
         ),
         const SizedBox(height: Dimensions.paddingSizeSmall),
-        if (false &&
-            profileController.profileInfo?.identificationImage != null &&
+        if (profileController.profileInfo?.identificationImage != null &&
             profileController.profileInfo!.identificationImage!.isNotEmpty) ...[
           Align(
               alignment: Alignment.centerLeft,

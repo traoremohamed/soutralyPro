@@ -205,6 +205,55 @@ class DateConverter {
     return createTime.difference(DateTime.now()).inMinutes + 1;
   }
 
+  static int findTimeDifferenceInSeconds(String dateTime) {
+    DateTime createTime = DateTime.parse(dateTime);
+    return createTime.difference(DateTime.now()).inSeconds;
+  }
+
+  static int minutesToSeconds(dynamic minuteValue) {
+    if (minuteValue == null) return 0;
+
+    if (minuteValue is num) {
+      return (minuteValue.toDouble() * 60).round();
+    }
+
+    final raw = minuteValue.toString().trim();
+    if (raw.isEmpty) return 0;
+
+    return ((double.tryParse(raw) ?? 0) * 60).round();
+  }
+
+  static String formatDurationHms(int totalSeconds) {
+    if (totalSeconds <= 0) {
+      return '0 s';
+    }
+
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    final parts = <String>[];
+    if (hours > 0) {
+      parts.add('$hours h');
+    }
+    if (minutes > 0 || (hours > 0 && seconds > 0)) {
+      parts.add('$minutes min');
+    }
+    if (seconds > 0) {
+      parts.add('$seconds s');
+    }
+
+    if (parts.isEmpty) {
+      return '0 s';
+    }
+
+    return parts.join(' ');
+  }
+
+  static String formatDurationHmsFromMinutes(dynamic minuteValue) {
+    return formatDurationHms(minutesToSeconds(minuteValue));
+  }
+
   static String getMinutesToDayHourMinutes(int value) {
     final duration = Duration(minutes: value);
     final days = duration.inDays;

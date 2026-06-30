@@ -71,12 +71,13 @@ class SignUpScreen extends StatelessWidget {
                           final code =
                               (cat.codeCategDriver ?? '').toUpperCase();
                           String label = 'Vous êtes';
-                          if (code == 'PART')
+                          if (code == 'PART') {
                             label = 'Vous êtes partenaire';
-                          else if (code == 'DRIVER')
+                          } else if (code == 'DRIVER') {
                             label = 'Vous êtes chauffeur';
-                          else if (code == 'LIVREUR')
+                          } else if (code == 'LIVREUR') {
                             label = 'Vous êtes livreur';
+                          }
                           final disabled = (authController.categorieDrivers.any((c) =>
                                       (c.codeCategDriver ?? '').toUpperCase() == 'PART' &&
                                       authController.selectedCategorieIds

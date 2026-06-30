@@ -73,6 +73,7 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
                 child: ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
+              onTap: () => setState(() => isForfait = true),
               title: Text(
                 'forfait'.tr,
                 maxLines: 1,
@@ -80,18 +81,16 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
                 softWrap: false,
                 style: textBold.copyWith(color: _dominantBlack),
               ),
-              leading: Radio<bool>(
-                  value: true,
-                  groupValue: isForfait,
-                  activeColor: _dominantOrange,
-                  onChanged: (v) {
-                    setState(() => isForfait = true);
-                  }),
+              leading: Icon(
+                isForfait ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: isForfait ? _dominantOrange : _dominantBlack,
+              ),
             )),
             Expanded(
                 child: ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
+              onTap: () => setState(() => isForfait = false),
               title: Text(
                 'commission'.tr,
                 maxLines: 1,
@@ -99,13 +98,12 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
                 softWrap: false,
                 style: textBold.copyWith(color: _dominantBlack),
               ),
-              leading: Radio<bool>(
-                  value: false,
-                  groupValue: isForfait,
-                  activeColor: _dominantOrange,
-                  onChanged: (v) {
-                    setState(() => isForfait = false);
-                  }),
+              leading: Icon(
+                !isForfait
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_off,
+                color: !isForfait ? _dominantOrange : _dominantBlack,
+              ),
             )),
           ]),
           if (isForfait) ...[
@@ -263,6 +261,9 @@ class _RechargeBottomSheetWidgetState extends State<RechargeBottomSheetWidget> {
                                     selectedCategoryIds.toList(),
                                     days: useDays);
                             if (!subscriptionSucceeded) {
+                              return;
+                            }
+                            if (!context.mounted) {
                               return;
                             }
                             Navigator.of(context).pop();

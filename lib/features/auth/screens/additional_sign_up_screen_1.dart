@@ -160,12 +160,7 @@ class _AdditionalSignUpScreen1State extends State<AdditionalSignUpScreen1> {
               radius: Dimensions.radiusExtraLarge,
               buttonText: 'next'.tr,
               onPressed: () {
-                String fName = authController.fNameController.text;
-                String lName = authController.lNameController.text;
                 String phone = authController.phoneController.text.trim();
-                String password = authController.passwordController.text;
-                String confirmPassword =
-                    authController.confirmPasswordController.text;
 
                 if (phone.isEmpty) {
                   showCustomSnackBar('phone_is_required'.tr);

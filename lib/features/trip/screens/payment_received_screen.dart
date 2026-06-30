@@ -104,6 +104,76 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen>
                     ? finalFareController.finalFare?.parcelCompleteTime
                     : finalFareController.finalFare?.rideCompleteTime;
 
+            double toDouble(dynamic value) {
+              if (value == null) return 0;
+              if (value is num) return value.toDouble();
+              return double.tryParse(value.toString()) ?? 0;
+            }
+
+            double toMinutes(dynamic value) {
+              if (value == null) return 0;
+              if (value is num) return value.toDouble();
+
+              final raw = value.toString().trim();
+              if (raw.isEmpty) return 0;
+
+              if (raw.contains(':')) {
+                final parts = raw.split(':');
+                if (parts.length == 3) {
+                  final h = int.tryParse(parts[0]) ?? 0;
+                  final m = int.tryParse(parts[1]) ?? 0;
+                  final s = int.tryParse(parts[2]) ?? 0;
+                  return (h * 60) + m + (s / 60);
+                }
+                if (parts.length == 2) {
+                  final m = int.tryParse(parts[0]) ?? 0;
+                  final s = int.tryParse(parts[1]) ?? 0;
+                  return m + (s / 60);
+                }
+              }
+
+              return double.tryParse(raw) ?? 0;
+            }
+
+            double firstNonZero(List<double> values) {
+              for (final value in values) {
+                if (value > 0) {
+                  return value;
+                }
+              }
+              return 0;
+            }
+
+            final rideTrip = Get.find<RideController>().tripDetail;
+
+            final waitingMinutes = firstNonZero([
+              toMinutes(finalFareController.finalFare?.waitingTime),
+              toMinutes(rideTrip?.waitingTime),
+            ]);
+            final pauseMinutes = firstNonZero([
+              toMinutes(finalFareController.finalFare?.idleTime),
+              toMinutes(rideTrip?.idleTime),
+            ]);
+            final delayMinutes =
+                toMinutes(finalFareController.finalFare?.delayTime);
+            final totalWaitingMinutes =
+                waitingMinutes + pauseMinutes + delayMinutes;
+
+            final waitingFeeAmount = firstNonZero([
+              toDouble(finalFareController.finalFare?.waitingFee),
+              toDouble(rideTrip?.waitingFee),
+            ]);
+            final pauseFeeAmount = firstNonZero([
+              toDouble(finalFareController.finalFare?.idleFee),
+              toDouble(rideTrip?.idleFee),
+            ]);
+            final delayFeeAmount = firstNonZero([
+              toDouble(finalFareController.finalFare?.delayFee),
+              toDouble(rideTrip?.delayFee),
+            ]);
+            final totalWaitingFeeAmount =
+                waitingFeeAmount + pauseFeeAmount + delayFeeAmount;
+
             return (finalFareController.finalFare != null)
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,8 +248,10 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   SummeryItem(
-                                    title:
-                                        '${finalFareController.finalFare!.actualTime} ${'minute'.tr}',
+                                    title: DateConverter
+                                        .formatDurationHmsFromMinutes(
+                                            finalFareController
+                                                .finalFare!.actualTime),
                                     subTitle: 'time',
                                   ),
                                   SizedBox(width: Get.width * 0.2),
@@ -267,6 +339,10 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen>
                                 '${finalFareController.finalFare!.pickupAddress}',
                             destinationAddress:
                                 '${finalFareController.finalFare!.destinationAddress}',
+                            vehicleCategoryName: Get.find<RideController>()
+                                .tripDetail
+                                ?.vehicleCategory
+                                ?.name,
                             extraOne: firstRoute,
                             extraTwo: secondRoute,
                             entrance:
@@ -372,18 +448,9 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen>
                                     PaymentItemInfoWidget(
                                       icon: Images.waitingPrice,
                                       title:
-                                          '${'waiting_fee'.tr} (${((finalFareController.finalFare?.waitingTime ?? 0)).toStringAsFixed(2)} min)',
+                                          '${'waiting_fee'.tr} (${DateConverter.formatDurationHmsFromMinutes(totalWaitingMinutes)})',
                                       // Waiting line should include all time-based add-ons.
-                                      amount: (Get.find<RideController>()
-                                                  .tripDetail
-                                                  ?.waitingFee ??
-                                              0) +
-                                          (finalFareController
-                                                  .finalFare?.idleFee ??
-                                              0) +
-                                          (finalFareController
-                                                  .finalFare?.delayFee ??
-                                              0),
+                                      amount: totalWaitingFeeAmount,
                                       payableRounded: true,
                                     ),
                                   if (finalFareController
@@ -491,7 +558,8 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen>
                         child: SpinKitCircle(
                             color: Theme.of(context).primaryColor, size: 40.0))
                     : ButtonWidget(
-                        buttonText: 'payment_received'.tr,
+                        buttonText: 'TERMINER',
+                        //buttonText: 'payment_received'.tr,
                         onPressed: () {
                           setState(() {
                             canPop = true;

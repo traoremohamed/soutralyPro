@@ -28,8 +28,6 @@ import 'package:ride_sharing_user_app/features/ride/domain/models/pending_ride_r
 import 'package:ride_sharing_user_app/features/ride/domain/models/remaining_distance_model.dart';
 import 'package:ride_sharing_user_app/features/ride/domain/models/trip_details_model.dart';
 import 'package:ride_sharing_user_app/features/trip/screens/payment_received_screen.dart';
-import 'package:ride_sharing_user_app/features/wallet/screens/wallet_screen.dart';
-import 'package:ride_sharing_user_app/features/wallet/widgets/recharge_bottom_sheet_widget.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
 class RideController extends GetxController implements GetxService {
@@ -47,6 +45,34 @@ class RideController extends GetxController implements GetxService {
   DateTime? arrivedAt;
   double gracePeriodMinutes = 0;
   double waitingFeePerMin = 0;
+  String? _pickupWaitingTripId;
+
+  void resetPickupWaitingState({bool notify = false}) {
+    _hasArrivedAtPickup = false;
+    arrivedAt = null;
+    gracePeriodMinutes = 0;
+    waitingFeePerMin = 0;
+    _pickupWaitingTripId = null;
+
+    if (notify) {
+      update();
+    }
+  }
+
+  void _bindWaitingStateToTrip(String? tripId) {
+    if (tripId == null || tripId.isEmpty) {
+      return;
+    }
+
+    if (_pickupWaitingTripId != tripId) {
+      resetPickupWaitingState();
+      _pickupWaitingTripId = tripId;
+    }
+  }
+
+  DateTime? pauseStartedAt;
+  Timer? pauseTimer;
+  String displayPauseElapsedTime = '00:00:00';
 
   double getDisplayFareFromTripDetail(TripDetail? trip) {
     if (trip == null) {
@@ -158,6 +184,13 @@ class RideController extends GetxController implements GetxService {
         profileController.profileInfo?.wallet?.walletBalance ?? 0;
     final double requiredCommission = requestTrip?.adminCommission ?? 0;
 
+    if (walletBalance <= 0) {
+      if (showDialog) {
+        profileController.checkZeroWalletPopup(forceShow: true);
+      }
+      return false;
+    }
+
     if (requiredCommission <= 0) {
       return true;
     }
@@ -167,38 +200,7 @@ class RideController extends GetxController implements GetxService {
     }
 
     if (showDialog) {
-      Get.dialog(
-        AlertDialog(
-          title: Text('insufficient_wallet_balance_title'.tr),
-          content: Text('insufficient_wallet_balance_for_trip'.tr),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Get.back();
-                Get.to(() => const WalletScreen());
-              },
-              child: Text('recharge'.tr),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.black38,
-                disabledForegroundColor: Colors.white70,
-              ),
-              onPressed: () {
-                Get.back();
-                Get.bottomSheet(
-                  const RechargeBottomSheetWidget(),
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                );
-              },
-              child: Text('subscribe'.tr),
-            ),
-          ],
-        ),
-      );
+      profileController.checkZeroWalletPopup(forceShow: true);
     }
 
     return false;
@@ -236,6 +238,12 @@ class RideController extends GetxController implements GetxService {
 
   Future<Response> getRideDetails(String tripId,
       {bool fromHomeScreen = false}) async {
+    final ProfileController profileController = Get.find<ProfileController>();
+    if (profileController.isWalletBlockedForTripActions) {
+      profileController.checkZeroWalletPopup(forceShow: true);
+      return Response(statusCode: 403, statusText: 'wallet_blocked');
+    }
+
     isLoading = true;
     _thumbnailPaths = null;
     if (kDebugMode) {
@@ -246,14 +254,31 @@ class RideController extends GetxController implements GetxService {
       tripDetail = TripDetailsModel.fromJson(response.body).data!;
       polyline = tripDetail!.encodedPolyline!;
       isLoading = false;
+
+      _bindWaitingStateToTrip(tripDetail?.id);
+
+      // Gérer le timer de pause
+      if (tripDetail?.isPaused == true) {
+        startPauseTimer();
+      } else {
+        stopPauseTimer();
+      }
+
       if (tripDetail?.currentStatus == 'out_for_pickup') {
         final waitingTime =
             double.tryParse((tripDetail?.waitingTime ?? '0').toString()) ?? 0;
         final delayFee = tripDetail?.delayFee ?? 0;
+        final bool hasServerWaitingState = waitingTime > 0 || delayFee > 0;
+        final bool hasLocalArrivalForCurrentTrip =
+            _pickupWaitingTripId == tripDetail?.id &&
+                (_hasArrivedAtPickup || arrivedAt != null);
+
+        // Preserve local arrival state for the same trip. The backend can
+        // still return waiting=0 immediately after marking arrival.
         _hasArrivedAtPickup =
-            _hasArrivedAtPickup || waitingTime > 0 || delayFee > 0;
-      } else if (tripDetail?.currentStatus == 'pending') {
-        _hasArrivedAtPickup = false;
+            hasServerWaitingState || hasLocalArrivalForCurrentTrip;
+      } else {
+        resetPickupWaitingState();
       }
 
       List<Attachments> attachments =
@@ -290,6 +315,12 @@ class RideController extends GetxController implements GetxService {
   String polyline = '';
 
   Future<Response> getRideDetailBeforeAccept(String tripId) async {
+    final ProfileController profileController = Get.find<ProfileController>();
+    if (profileController.isWalletBlockedForTripActions) {
+      profileController.checkZeroWalletPopup(forceShow: true);
+      return Response(statusCode: 403, statusText: 'wallet_blocked');
+    }
+
     isLoading = true;
     update();
     await Get.find<LocationController>().getCurrentLocation(callZone: false);
@@ -321,6 +352,9 @@ class RideController extends GetxController implements GetxService {
       ongoingTrip = [];
       if (response.body['data'] != null) {
         ongoingTrip!.addAll(OngoingTripModel.fromJson(response.body).data!);
+      }
+      if ((ongoingTrip ?? []).isEmpty) {
+        resetPickupWaitingState();
       }
     } else {
       ApiChecker.checkApi(response);
@@ -466,6 +500,9 @@ class RideController extends GetxController implements GetxService {
         Get.find<SafetyAlertController>().checkDriverNeedSafety();
       }
 
+      resetPickupWaitingState();
+      _pickupWaitingTripId = tripId;
+
       clearVerificationCode();
       if (tripDetail!.type! == 'parcel' &&
           tripDetail?.parcelInformation?.payer == 'sender') {
@@ -569,6 +606,9 @@ class RideController extends GetxController implements GetxService {
     if (response.statusCode == 200) {
       Get.find<TripController>().othersCancellationController.clear();
       Get.find<SafetyAlertController>().cancelDriverNeedSafetyStream();
+      if (status == 'completed' || status == 'cancelled') {
+        resetPickupWaitingState();
+      }
       showCustomSnackBar(
         DynamicTranslationHelper.translate(message),
         isError: false,
@@ -694,6 +734,7 @@ class RideController extends GetxController implements GetxService {
     if (response.statusCode == 200) {
       _hasArrivedAtPickup = true;
       arrivedAt = DateTime.now();
+      _pickupWaitingTripId = tripId;
       showCustomSnackBar('trip_status_updated_successfully'.tr, isError: false);
       getRideDetails(tripId);
       getLiveFees(
@@ -735,6 +776,37 @@ class RideController extends GetxController implements GetxService {
     return response;
   }
 
+  void startPauseTimer() {
+    pauseStartedAt = DateTime.now();
+    pauseTimer?.cancel();
+    pauseTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      updatePauseElapsedTime();
+    });
+    updatePauseElapsedTime();
+  }
+
+  void stopPauseTimer() {
+    pauseTimer?.cancel();
+    pauseTimer = null;
+    pauseStartedAt = null;
+    displayPauseElapsedTime = '00:00:00';
+    update();
+  }
+
+  void updatePauseElapsedTime() {
+    if (pauseStartedAt == null) return;
+
+    final elapsed = DateTime.now().difference(pauseStartedAt!);
+    displayPauseElapsedTime = formatPauseTime(elapsed);
+    update();
+  }
+
+  String formatPauseTime(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
   Future<Response?> getLiveFees(String tripId) async {
     Response response = await rideServiceInterface.getLiveFees(tripId);
     if (kDebugMode) {
@@ -745,7 +817,7 @@ class RideController extends GetxController implements GetxService {
       final data = response.body['data'];
       if (kDebugMode) {
         print(
-            '[getLiveFees] waiting_fee_per_min=${data?["waiting_fee_per_min"]} grace=${data?["grace_period_minutes"]}');
+            '[getLiveFees] waiting_fee_per_min=${data?["waiting_fee_per_min"]} grace=${data?["grace_period_minutes"]} waiting_fee=${data?["waiting_fee"]} waiting_time=${data?["waiting_time"]}');
       }
       if (tripDetail != null && data != null) {
         tripDetail!.waitingFee =
@@ -890,7 +962,8 @@ class RideController extends GetxController implements GetxService {
       getRideDetails(tripDetail!.id!);
       Get.find<RiderMapController>()
           .setRideCurrentState(RideState.outForPickup);
-      _hasArrivedAtPickup = false;
+      resetPickupWaitingState();
+      _pickupWaitingTripId = tripId;
 
       // if(otp.isEmpty){
       //   showCustomSnackBar('trip_started'.tr, isError: false);
@@ -904,5 +977,12 @@ class RideController extends GetxController implements GetxService {
     }
     update();
     return response;
+  }
+
+  @override
+  void onClose() {
+    pauseTimer?.cancel();
+    resetPickupWaitingState();
+    super.onClose();
   }
 }

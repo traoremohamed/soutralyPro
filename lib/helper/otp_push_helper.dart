@@ -7,11 +7,19 @@ class OtpPushHelper {
   static const String _pendingOtpKey = 'pending_otp_from_push';
   static final StreamController<String> _otpStreamController =
       StreamController<String>.broadcast();
+  static final RegExp _sixDigitsRegExp = RegExp(r'\b\d{6}\b');
 
   static Stream<String> get otpStream => _otpStreamController.stream;
 
   static bool isOtpMessage(Map<String, dynamic> data) {
-    return (data['type']?.toString() ?? '') == 'OTP_VERIFICATION';
+    final String type = (data['type']?.toString() ?? '').trim().toUpperCase();
+    final String action =
+        (data['action']?.toString() ?? '').trim().toUpperCase();
+
+    return type == 'OTP_VERIFICATION' ||
+        type == 'OTP' ||
+        action == 'OTP_VERIFICATION' ||
+        action == 'OTP';
   }
 
   static Future<void> captureRemoteMessage(RemoteMessage message) async {
@@ -19,11 +27,30 @@ class OtpPushHelper {
   }
 
   static Future<void> captureData(Map<String, dynamic> data) async {
-    if (!isOtpMessage(data)) {
+    final String rawText =
+        '${data['body']?.toString() ?? ''} ${data['message']?.toString() ?? ''} ${data['title']?.toString() ?? ''}';
+    final bool hasOtpKeyword = rawText.toLowerCase().contains('otp');
+
+    if (!isOtpMessage(data) && !hasOtpKeyword) {
       return;
     }
 
-    final String otpCode = (data['code']?.toString() ?? '').trim();
+    String otpCode = (data['code']?.toString() ?? '').trim();
+    if (otpCode.isEmpty) {
+      otpCode = (data['otp']?.toString() ?? '').trim();
+    }
+    if (otpCode.isEmpty) {
+      otpCode = (data['otp_code']?.toString() ?? '').trim();
+    }
+    if (otpCode.isEmpty) {
+      otpCode = (data['otpCode']?.toString() ?? '').trim();
+    }
+
+    if (otpCode.isEmpty) {
+      final Match? match = _sixDigitsRegExp.firstMatch(rawText);
+      otpCode = match?.group(0) ?? '';
+    }
+
     if (otpCode.length != 6) {
       return;
     }

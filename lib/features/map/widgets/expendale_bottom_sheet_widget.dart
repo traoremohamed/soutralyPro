@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/common_widgets/expandable_bottom_sheet.dart';
 import 'package:ride_sharing_user_app/common_widgets/loader_widget.dart';
-import 'package:ride_sharing_user_app/features/leaderboard/screens/leaderboard_screen.dart';
 import 'package:ride_sharing_user_app/features/map/controllers/map_controller.dart';
 import 'package:ride_sharing_user_app/features/map/widgets/accepted_ride_widget.dart';
 import 'package:ride_sharing_user_app/features/map/widgets/calculating_sub_total_widget.dart';
@@ -80,19 +79,21 @@ class RiderBottomSheetWidget extends StatelessWidget {
                         Dimensions.paddingSizeDefault,
                       ),
                       child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             rideController.isLoading
                                 ? const LoaderWidget()
                                 : CustomIconCardWidget(
                                     title: 'refresh'.tr,
                                     icon: Images.mIcon3,
+                                    iconColor: const Color(0xFFFF7A00),
                                     onTap: () {
                                       rideController.getPendingRideRequestList(
                                           1,
                                           isUpdate: true);
                                     },
                                   ),
+                            const SizedBox(width: 32),
                             // CustomIconCardWidget(
                             //   title: 'leader_board'.tr,
                             //   icon: Images.mIcon2,
@@ -102,6 +103,7 @@ class RiderBottomSheetWidget extends StatelessWidget {
                             CustomIconCardWidget(
                               title: 'trip_request'.tr,
                               icon: Images.mIcon1,
+                              iconColor: const Color(0xFFFF7A00),
                               onTap: () =>
                                   Get.to(() => const RideRequestScreen()),
                             ),

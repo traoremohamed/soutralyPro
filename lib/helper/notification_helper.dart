@@ -127,8 +127,8 @@ class NotificationHelper {
     );
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      OtpPushHelper.captureRemoteMessage(message);
       if (OtpPushHelper.isOtpMessage(message.data)) {
-        OtpPushHelper.captureRemoteMessage(message);
         return;
       }
 
@@ -351,8 +351,8 @@ class NotificationHelper {
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       customPrint('onOpenApp: ${message.data}');
+      OtpPushHelper.captureRemoteMessage(message);
       if (OtpPushHelper.isOtpMessage(message.data)) {
-        OtpPushHelper.captureRemoteMessage(message);
         return;
       }
       notificationToRoute(message.data);

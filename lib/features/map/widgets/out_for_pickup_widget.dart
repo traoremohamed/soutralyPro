@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:just_the_tooltip/just_the_tooltip.dart';
@@ -298,15 +299,6 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
     super.dispose();
   }
 
-  /// Format a duration in seconds as "Xm Ys" or "Xm" when seconds == 0.
-  String _formatDuration(int totalSeconds) {
-    if (totalSeconds <= 0) return '0m 00s';
-    final min = totalSeconds ~/ 60;
-    final sec = totalSeconds % 60;
-    if (sec == 0) return '${min}m';
-    return '${min}m ${sec.toString().padLeft(2, '0')}s';
-  }
-
   /// Build the dynamic waiting-time box shown after driver arrives at pickup.
   Widget _buildWaitingBox(BuildContext context, RideController rc) {
     final DateTime? arrived = rc.arrivedAt;
@@ -328,6 +320,11 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
     final int elapsedSec =
         DateTime.now().difference(arrived).inSeconds.clamp(0, 86400);
     final int graceRemainSec = graceSec - elapsedSec;
+    final double billableMinutes =
+        graceRemainSec < 0 ? (-graceRemainSec) / 60 : 0;
+    final double apiWaitingFee = rc.tripDetail?.waitingFee ?? 0;
+    final double displayedWaitingFee =
+        apiWaitingFee > 0 ? apiWaitingFee : (billableMinutes * feePerMin);
 
     return Container(
       width: double.infinity,
@@ -351,7 +348,7 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                     size: 16, color: Theme.of(context).primaryColor),
                 const SizedBox(width: 6),
                 Text(
-                  '${'free_waiting'.tr}: ${_formatDuration(graceRemainSec)}',
+                  '${'free_waiting'.tr}: ${DateConverter.formatDurationHms(graceRemainSec)}',
                   style: textMedium.copyWith(
                     color: Theme.of(context).primaryColor,
                     fontSize: Dimensions.fontSizeSmall,
@@ -369,7 +366,7 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                         size: 16, color: Theme.of(context).primaryColor),
                     const SizedBox(width: 4),
                     Text(
-                      '${'waiting_time'.tr}: ${_formatDuration(-graceRemainSec)}',
+                      '${'waiting_time'.tr}: ${DateConverter.formatDurationHms(-graceRemainSec)}',
                       style: textMedium.copyWith(
                         color: Theme.of(context).primaryColor,
                         fontSize: Dimensions.fontSizeSmall,
@@ -378,8 +375,7 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                   ],
                 ),
                 Text(
-                  PriceConverter.convertPrice(
-                      context, ((-graceRemainSec) ~/ 60) * feePerMin),
+                  PriceConverter.convertPrice(context, displayedWaitingFee),
                   style: textMedium.copyWith(
                     color: Theme.of(context).primaryColor,
                     fontSize: Dimensions.fontSizeSmall,
@@ -394,6 +390,28 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
   Widget build(BuildContext context) {
     return GetBuilder<RiderMapController>(builder: (riderController) {
       return GetBuilder<RideController>(builder: (rideController) {
+        String firstRoute = '';
+        String secondRoute = '';
+        String thirdRoute = '';
+
+        List<dynamic> extraRoute = [];
+        if (rideController.tripDetail != null) {
+          if (rideController.tripDetail!.intermediateAddresses != null &&
+              rideController.tripDetail!.intermediateAddresses != '[[, ]]') {
+            extraRoute =
+                jsonDecode(rideController.tripDetail!.intermediateAddresses!);
+            if (extraRoute.isNotEmpty) {
+              firstRoute = extraRoute[0];
+            }
+            if (extraRoute.isNotEmpty && extraRoute.length > 1) {
+              secondRoute = extraRoute[1];
+            }
+            if (extraRoute.isNotEmpty && extraRoute.length > 2) {
+              thirdRoute = extraRoute[2];
+            }
+          }
+        }
+
         if (rideController.tripDetail!.estimatedDistance
             .toString()
             .contains("km")) {
@@ -474,18 +492,28 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                   margin: EdgeInsets.symmetric(
                       horizontal: Dimensions.paddingSizeLarge),
                   child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('pickup_date_time'.tr,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text('pickup_date_time'.tr,
                             style: textRegular.copyWith(
                                 fontSize: Dimensions.fontSizeSmall)),
-                        Text(
+                      ),
+                      const SizedBox(width: Dimensions.paddingSizeSmall),
+                      Flexible(
+                        child: Text(
                             DateConverter.tripDetailsShowFormat(
                                 rideController.tripDetail?.scheduledAt ?? ''),
+                            textAlign: TextAlign.end,
+                            maxLines: 2,
+                            softWrap: true,
+                            overflow: TextOverflow.ellipsis,
                             style: textSemiBold.copyWith(
                               fontSize: Dimensions.fontSizeSmall,
-                            ))
-                      ]),
+                            )),
+                      )
+                    ],
+                  ),
                 )
               else
                 Container(
@@ -500,20 +528,33 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                   margin: EdgeInsets.symmetric(
                       horizontal: Dimensions.paddingSizeLarge),
                   child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                            spacing: Dimensions.paddingSizeExtraSmall,
-                            children: [
-                              Image.asset(Images.circularClockIcon,
-                                  height: 12, width: 12),
-                              Text(
-                                  '${rideController.tripDetail?.estimatedTime} ${'min_away'.tr}',
-                                  style: textRegular.copyWith(
-                                      fontSize: Dimensions.fontSizeSmall))
-                            ]),
-                        Text(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Row(children: [
+                          Image.asset(Images.circularClockIcon,
+                              height: 12, width: 12),
+                          const SizedBox(
+                              width: Dimensions.paddingSizeExtraSmall),
+                          Expanded(
+                            child: Text(
+                                '${DateConverter.formatDurationHmsFromMinutes(rideController.tripDetail?.estimatedTime)} ${'from_now'.tr}',
+                                maxLines: 2,
+                                softWrap: true,
+                                overflow: TextOverflow.ellipsis,
+                                style: textRegular.copyWith(
+                                    fontSize: Dimensions.fontSizeSmall)),
+                          )
+                        ]),
+                      ),
+                      const SizedBox(width: Dimensions.paddingSizeSmall),
+                      Flexible(
+                        child: Text(
                             '${'distance'.tr}: ${rideController.matchedMode?.distanceText}',
+                            textAlign: TextAlign.end,
+                            maxLines: 2,
+                            softWrap: true,
+                            overflow: TextOverflow.ellipsis,
                             style: textRegular.copyWith(
                               color: Theme.of(context)
                                   .textTheme
@@ -521,19 +562,21 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                                   ?.color
                                   ?.withValues(alpha: 0.7),
                               fontSize: Dimensions.fontSizeSmall,
-                            ))
-                      ]),
+                            )),
+                      )
+                    ],
+                  ),
                 ),
               const SizedBox(height: Dimensions.paddingSizeSmall),
               if (rideController.tripDetail?.type == 'scheduled_request' &&
-                  (DateConverter.findTimeDifference(
+                  (DateConverter.findTimeDifferenceInSeconds(
                           rideController.tripDetail?.scheduledAt ?? '') >
                       0)) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(
                       horizontal: Dimensions.paddingSizeDefault),
                   child: Text(
-                    '${'your_pickup_time_start'.tr} ${DateConverter.getMinutesToDayHourMinutes(DateConverter.findTimeDifference(rideController.tripDetail?.scheduledAt ?? ''))} ${'from_now'.tr}',
+                    '${'your_pickup_time_start'.tr} ${DateConverter.formatDurationHms(DateConverter.findTimeDifferenceInSeconds(rideController.tripDetail?.scheduledAt ?? ''))} ${'from_now'.tr}',
                     style: textRegular.copyWith(
                         color: Theme.of(context).colorScheme.surfaceContainer),
                   ),
@@ -549,6 +592,12 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                 pickupAddress: rideController.tripDetail?.pickupAddress ?? '',
                 destinationAddress:
                     rideController.tripDetail?.destinationAddress ?? '',
+                hideDestination: true,
+                vehicleCategoryName:
+                    rideController.tripDetail?.vehicleCategory?.name,
+                extraOne: firstRoute,
+                extraTwo: secondRoute,
+                extraThree: thirdRoute,
               ),
             ),
             const SizedBox(height: Dimensions.paddingSizeDefault),
@@ -557,9 +606,9 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: Dimensions.paddingSizeExtraLarge),
                 child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(children: [
+                  children: [
+                    Expanded(
+                      child: Row(children: [
                         SizedBox(
                             width: Dimensions.iconSizeMedium,
                             child: Image.asset(
@@ -568,20 +617,31 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                                   Theme.of(context).textTheme.bodyMedium?.color,
                             )),
                         const SizedBox(width: Dimensions.paddingSizeSmall),
-                        Text("total_distance".tr,
-                            style: textRegular.copyWith(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.color
-                                    ?.withValues(alpha: 0.7))),
+                        Expanded(
+                          child: Text("total_distance".tr,
+                              maxLines: 2,
+                              softWrap: true,
+                              overflow: TextOverflow.ellipsis,
+                              style: textRegular.copyWith(
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.color
+                                      ?.withValues(alpha: 0.7))),
+                        ),
                       ]),
-                      const SizedBox(width: Dimensions.paddingSizeSmall),
-                      Text(
+                    ),
+                    const SizedBox(width: Dimensions.paddingSizeSmall),
+                    Flexible(
+                      child: Text(
                         totalDistance.contains('km')
                             ? rideController.tripDetail!.estimatedDistance
                                 .toString()
                             : '${double.parse(rideController.tripDetail!.estimatedDistance.toString()).toStringAsFixed(2)} km',
+                        textAlign: TextAlign.end,
+                        maxLines: 2,
+                        softWrap: true,
+                        overflow: TextOverflow.ellipsis,
                         style: textRegular.copyWith(
                             color: Theme.of(context)
                                 .textTheme
@@ -589,7 +649,9 @@ class _AcceptedTripWidgetState extends State<_AcceptedTripWidget> {
                                 ?.color
                                 ?.withValues(alpha: 0.7)),
                       ),
-                    ]),
+                    ),
+                  ],
+                ),
               ),
             const SizedBox(height: Dimensions.paddingSizeDefault),
             _FareDetailsWidget(rideController: rideController),

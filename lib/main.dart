@@ -10,6 +10,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:ride_sharing_user_app/helper/notification_helper.dart';
 import 'package:ride_sharing_user_app/helper/deep_link_service.dart';
+import 'package:ride_sharing_user_app/helper/in_app_update_helper.dart';
 import 'package:ride_sharing_user_app/helper/otp_push_helper.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
@@ -84,6 +85,9 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     DeepLinkService.instance.initDeepLinks();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      InAppUpdateHelper.checkAndForceImmediateUpdate();
+    });
   }
 
   @override

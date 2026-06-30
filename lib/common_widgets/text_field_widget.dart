@@ -167,7 +167,7 @@ class _TextFieldWidgetState extends State<TextFieldWidget> {
                 ),
               )
             : (widget.showCountryCode
-                ? Container(
+                ? SizedBox(
                     width: Get.width * 0.27,
                     child: Row(
                       children: [

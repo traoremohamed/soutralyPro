@@ -30,9 +30,9 @@ class TransactionModel {
 
     if (items != null && items is Iterable) {
       data = <Transaction>[];
-      items.forEach((v) {
+      for (final v in items) {
         data!.add(Transaction.fromJson(v));
-      });
+      }
     }
   }
 }

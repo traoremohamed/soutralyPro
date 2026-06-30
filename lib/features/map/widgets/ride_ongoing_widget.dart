@@ -34,7 +34,6 @@ class RideOngoingWidget extends StatefulWidget {
   final GlobalKey<ExpandableBottomSheetState> expandableKey;
   const RideOngoingWidget(
       {super.key, required this.tripId, required this.expandableKey});
-
   @override
   State<RideOngoingWidget> createState() => _RideOngoingWidgetState();
 }
@@ -418,6 +417,7 @@ class _OngoingTripWidget extends StatelessWidget {
     return GetBuilder<RideController>(builder: (rideController) {
       String firstRoute = '';
       String secondRoute = '';
+      String thirdRoute = '';
       List<dynamic> extraRoute = [];
       if (rideController.tripDetail != null) {
         if (rideController.tripDetail!.intermediateAddresses != null &&
@@ -429,6 +429,9 @@ class _OngoingTripWidget extends StatelessWidget {
           }
           if (extraRoute.isNotEmpty && extraRoute.length > 1) {
             secondRoute = extraRoute[1];
+          }
+          if (extraRoute.isNotEmpty && extraRoute.length > 2) {
+            thirdRoute = extraRoute[2];
           }
         }
       }
@@ -453,6 +456,7 @@ class _OngoingTripWidget extends StatelessWidget {
                     rideController.tripDetail!.destinationAddress!,
                 extraOne: firstRoute,
                 extraTwo: secondRoute,
+                extraThree: thirdRoute,
                 entrance: rideController.tripDetail?.entrance ?? '',
               ),
             ),
@@ -519,18 +523,28 @@ class _OngoingTripWidget extends StatelessWidget {
                       BorderRadius.circular(Dimensions.fontSizeExtraSmall),
                   color: Theme.of(context).primaryColor,
                 ),
-                child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${'who_will_pay'.tr}?',
-                        style: textRegular.copyWith(color: Colors.white),
-                      ),
-                      Text(
-                        rideController.tripDetail!.parcelInformation!.payer!.tr,
-                        style: textMedium.copyWith(color: Colors.white),
-                      )
-                    ]),
+                child: Row(children: [
+                  Expanded(
+                    child: Text(
+                      '${'who_will_pay'.tr}?',
+                      maxLines: 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: textRegular.copyWith(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: Dimensions.paddingSizeSmall),
+                  Flexible(
+                    child: Text(
+                      rideController.tripDetail!.parcelInformation!.payer!.tr,
+                      textAlign: TextAlign.end,
+                      maxLines: 2,
+                      softWrap: true,
+                      overflow: TextOverflow.ellipsis,
+                      style: textMedium.copyWith(color: Colors.white),
+                    ),
+                  )
+                ]),
               ),
             if (rideController.tripDetail != null &&
                 rideController.tripDetail!.type == AppConstants.parcel &&
@@ -555,7 +569,53 @@ class _OngoingTripWidget extends StatelessWidget {
                 },
               ),
             (rideController.tripDetail!.isPaused!)
-                ? const SizedBox()
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: Dimensions.paddingSizeDefault),
+                    child: Container(
+                      width: Get.width,
+                      padding:
+                          const EdgeInsets.all(Dimensions.paddingSizeDefault),
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(Dimensions.paddingSizeSmall),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withValues(alpha: .15),
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .primaryColor
+                              .withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              Icon(Icons.pause_circle_outline,
+                                  color: Theme.of(context).primaryColor,
+                                  size: 20),
+                              const SizedBox(
+                                  width: Dimensions.paddingSizeSmall),
+                              Text(
+                                'pause_elapsed_time'.tr,
+                                style: textMedium.copyWith(
+                                    color: Theme.of(context).primaryColor),
+                              ),
+                            ]),
+                            const SizedBox(height: Dimensions.paddingSizeSmall),
+                            Text(
+                              rideController.displayPauseElapsedTime,
+                              style: textBold.copyWith(
+                                fontSize: Dimensions.fontSizeLarge,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ]),
+                    ),
+                  )
                 : (!rideController.tripDetail!.isPaused! &&
                         rideController.tripDetail!.type != AppConstants.parcel)
                     ? Column(children: [
