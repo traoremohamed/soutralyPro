@@ -503,10 +503,7 @@ class AuthController extends GetxController implements GetxService {
     _isOtpSending = true;
     update();
 
-    String? fcmToken;
-    try {
-      fcmToken = await FirebaseMessaging.instance.getToken();
-    } catch (_) {}
+    final String? fcmToken = await _getOtpDeliveryToken();
 
     Response? response = await authServiceInterface.sendOtp(
         phone: countryCode + number, fcmToken: fcmToken);
@@ -519,6 +516,58 @@ class AuthController extends GetxController implements GetxService {
     }
     update();
     return response;
+  }
+
+  Future<String?> _getOtpDeliveryToken() async {
+    try {
+      if (GetPlatform.isIOS) {
+        await FirebaseMessaging.instance
+            .setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+
+        final NotificationSettings settings =
+            await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: true,
+        );
+
+        if (settings.authorizationStatus == AuthorizationStatus.denied) {
+          return await _waitForFirebaseToken();
+        }
+
+        for (int attempt = 0; attempt < 6; attempt++) {
+          final String? apnsToken =
+              await FirebaseMessaging.instance.getAPNSToken();
+          if (apnsToken != null && apnsToken.isNotEmpty) {
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 400));
+        }
+      }
+
+      return await _waitForFirebaseToken();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> _waitForFirebaseToken() async {
+    for (int attempt = 0; attempt < 5; attempt++) {
+      final String? token = await FirebaseMessaging.instance.getToken();
+      if (token != null && token.isNotEmpty) {
+        return token;
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    return null;
   }
 
   Future<void> firebaseOtpSend(

@@ -106,8 +106,10 @@ class AuthRepository implements AuthRepositoryInterface {
         provisional: false,
         sound: true,
       );
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
         deviceToken = await _saveDeviceToken();
+        deviceToken ??= await _waitForFirebaseToken();
       }
     } else {
       deviceToken = await _saveDeviceToken();
@@ -118,6 +120,17 @@ class AuthRepository implements AuthRepositoryInterface {
     }
     return await apiClient.postData(AppConstants.fcmTokenUpdate,
         {"_method": "put", "fcm_token": deviceToken});
+  }
+
+  Future<String?> _waitForFirebaseToken() async {
+    for (int attempt = 0; attempt < 5; attempt++) {
+      final String? token = await FirebaseMessaging.instance.getToken();
+      if (token != null && token.isNotEmpty) {
+        return token;
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    return null;
   }
 
   Future<String?> _saveDeviceToken() async {
