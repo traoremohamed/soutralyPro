@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -55,12 +56,15 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   void _applyOtpCode(String otpCode) {
+    debugPrint('[OTP_TRACE][verify] _applyOtpCode received="$otpCode" mounted=$mounted');
     if (!mounted || otpCode.length != 6) {
+      debugPrint('[OTP_TRACE][verify] ignored: mounted=$mounted length=${otpCode.length}');
       return;
     }
 
     pinController.text = otpCode;
     Get.find<AuthController>().updateVerificationCode(otpCode);
+    debugPrint('[OTP_TRACE][verify] otp applied to input and controller');
     OtpPushHelper.clearPendingOtp();
   }
 

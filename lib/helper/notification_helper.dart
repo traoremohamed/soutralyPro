@@ -127,8 +127,10 @@ class NotificationHelper {
     );
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      customPrint('[OTP_TRACE][notif][onMessage] data=${message.data}');
       OtpPushHelper.captureRemoteMessage(message);
       if (OtpPushHelper.isOtpMessage(message.data)) {
+        customPrint('[OTP_TRACE][notif][onMessage] otp message detected, skip non-otp routing');
         return;
       }
 
@@ -690,6 +692,7 @@ class NotificationHelper {
 
 Future<dynamic> myBackgroundMessageHandler(RemoteMessage remoteMessage) async {
   customPrint('onBackground: ${remoteMessage.data}');
+  customPrint('[OTP_TRACE][notif][background] data=${remoteMessage.data}');
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -711,6 +714,7 @@ Future<dynamic> myBackgroundMessageHandler(RemoteMessage remoteMessage) async {
 
   if (remoteMessage.data.isNotEmpty) {
     if (OtpPushHelper.isOtpMessage(remoteMessage.data)) {
+      customPrint('[OTP_TRACE][notif][background] otp message detected, local notification suppressed');
       return;
     }
 

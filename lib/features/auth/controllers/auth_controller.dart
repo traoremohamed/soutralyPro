@@ -503,10 +503,21 @@ class AuthController extends GetxController implements GetxService {
     _isOtpSending = true;
     update();
 
+    final String phone = countryCode + number;
+    debugPrint('[OTP_TRACE][sendOtp] start platform=${GetPlatform.isIOS ? 'ios' : GetPlatform.isAndroid ? 'android' : 'other'} phone=$phone');
+
     final String? fcmToken = await _getOtpDeliveryToken();
+    final String maskedToken = fcmToken == null
+      ? 'null'
+      : (fcmToken.length > 18
+        ? '${fcmToken.substring(0, 12)}...${fcmToken.substring(fcmToken.length - 6)}'
+        : fcmToken);
+    debugPrint('[OTP_TRACE][sendOtp] token=$maskedToken');
 
     Response? response = await authServiceInterface.sendOtp(
-        phone: countryCode + number, fcmToken: fcmToken);
+      phone: phone, fcmToken: fcmToken);
+    debugPrint(
+      '[OTP_TRACE][sendOtp] response status=${response?.statusCode} push_sent=${response?.body?['content']?['push_sent']} delivery=${response?.body?['content']?['delivery_channel']} body=${response?.body}');
     if (response!.statusCode == 200) {
       _isOtpSending = false;
       showCustomSnackBar('otp_sent_successfully'.tr, isError: false);
@@ -520,6 +531,7 @@ class AuthController extends GetxController implements GetxService {
 
   Future<String?> _getOtpDeliveryToken() async {
     try {
+      debugPrint('[OTP_TRACE][token] _getOtpDeliveryToken start');
       if (GetPlatform.isIOS) {
         await FirebaseMessaging.instance
             .setForegroundNotificationPresentationOptions(
@@ -539,13 +551,23 @@ class AuthController extends GetxController implements GetxService {
           sound: true,
         );
 
+        debugPrint(
+            '[OTP_TRACE][token][ios] permission=${settings.authorizationStatus.name}');
+
         if (settings.authorizationStatus == AuthorizationStatus.denied) {
+          debugPrint('[OTP_TRACE][token][ios] permission denied, trying token anyway');
           return await _waitForFirebaseToken();
         }
 
         for (int attempt = 0; attempt < 6; attempt++) {
           final String? apnsToken =
               await FirebaseMessaging.instance.getAPNSToken();
+          final String maskedApns = apnsToken == null
+              ? 'null'
+              : (apnsToken.length > 18
+                  ? '${apnsToken.substring(0, 12)}...${apnsToken.substring(apnsToken.length - 6)}'
+                  : apnsToken);
+          debugPrint('[OTP_TRACE][token][ios] apns_attempt=${attempt + 1} apns=$maskedApns');
           if (apnsToken != null && apnsToken.isNotEmpty) {
             break;
           }
@@ -554,7 +576,8 @@ class AuthController extends GetxController implements GetxService {
       }
 
       return await _waitForFirebaseToken();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[OTP_TRACE][token] exception=$e');
       return null;
     }
   }
@@ -562,11 +585,18 @@ class AuthController extends GetxController implements GetxService {
   Future<String?> _waitForFirebaseToken() async {
     for (int attempt = 0; attempt < 5; attempt++) {
       final String? token = await FirebaseMessaging.instance.getToken();
+      final String maskedToken = token == null
+          ? 'null'
+          : (token.length > 18
+              ? '${token.substring(0, 12)}...${token.substring(token.length - 6)}'
+              : token);
+      debugPrint('[OTP_TRACE][token] fcm_attempt=${attempt + 1} token=$maskedToken');
       if (token != null && token.isNotEmpty) {
         return token;
       }
       await Future.delayed(const Duration(milliseconds: 300));
     }
+    debugPrint('[OTP_TRACE][token] no fcm token after retries');
     return null;
   }
 
