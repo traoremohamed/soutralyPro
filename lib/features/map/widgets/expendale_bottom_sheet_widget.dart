@@ -56,10 +56,21 @@ class RiderBottomSheetWidget extends StatelessWidget {
                       )),
                   if (mapController.currentRideState == RideState.initial)
                     const StayOnlineWidget(),
-                  if (mapController.currentRideState == RideState.pending &&
-                      rideController.tripDetail != null)
-                    CustomerRideRequestCardWidget(
-                        rideRequest: rideController.tripDetail!),
+                  if (mapController.currentRideState == RideState.pending)
+                    Builder(builder: (context) {
+                      debugPrint(
+                          '[MAP_DEBUG] bottom sheet evaluating pending state: tripDetail=${rideController.tripDetail != null ? rideController.tripDetail!.id : 'null'}');
+                      if (rideController.tripDetail != null) {
+                        debugPrint(
+                            '[MAP_DEBUG] bottom sheet rendering customer card for trip=${rideController.tripDetail!.id}');
+                        return CustomerRideRequestCardWidget(
+                          rideRequest: rideController.tripDetail!,
+                        );
+                      }
+                      debugPrint(
+                          '[MAP_DEBUG] bottom sheet skipped customer card because tripDetail is null');
+                      return const SizedBox.shrink();
+                    }),
                   if (mapController.currentRideState == RideState.accepted)
                     AcceptedRiderWidget(expandableKey: expandableKey),
                   if (mapController.currentRideState == RideState.outForPickup)

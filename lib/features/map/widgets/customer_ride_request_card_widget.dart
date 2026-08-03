@@ -53,16 +53,24 @@ class CustomerRideRequestCardWidget extends StatelessWidget {
     final value =
         await rideController.getRideDetailBeforeAccept(rideRequest.id!);
     if (value.statusCode == 200) {
+      debugPrint(
+          '[MAP_DEBUG] _openRidePreviewMap success trip=${rideRequest.id} route=${Get.currentRoute}');
       rideController.getPendingRideRequestList(1, limit: 100);
       rideController.updateRoute(false, notify: true);
       if (Get.currentRoute != '/MapScreen') {
+        debugPrint('[MAP_DEBUG] _openRidePreviewMap navigating to MapScreen');
         Get.to(() => const MapScreen());
       }
+    } else {
+      debugPrint(
+          '[MAP_DEBUG] _openRidePreviewMap failed trip=${rideRequest.id} status=${value.statusCode}');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint(
+        '[MAP_DEBUG] CustomerRideRequestCardWidget build trip=${rideRequest.id} fromList=$fromList fromParcel=$fromParcel');
     return !fromList
         ? GetBuilder<RideController>(builder: (rideController) {
             return InkWell(
@@ -108,6 +116,20 @@ class CustomerRideRequestCardWidget extends StatelessWidget {
                   ),
                   child: Column(children: [
                     _CommonDesignPart(rideRequest: rideRequest),
+                    if (rideController.pendingDecisionTimerActive &&
+                        rideController.pendingRideDecisionTripId ==
+                            rideRequest.id)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                            top: Dimensions.paddingSizeSmall),
+                        child: Text(
+                          'Réponse requise dans ${rideController.pendingRideDecisionRemainingSeconds}s',
+                          style: textRegular.copyWith(
+                            color: Theme.of(context).primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     fromParcel
                         ? Padding(
                             padding: const EdgeInsets.fromLTRB(
@@ -484,127 +506,193 @@ class CustomerRideRequestCardWidget extends StatelessWidget {
                       child: Column(children: [
                         _CommonDesignPart(rideRequest: rideRequest),
                         GetBuilder<RideController>(builder: (rideController) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: Dimensions.paddingSizeDefault,
-                              vertical: Dimensions.paddingSizeDefault,
-                            ),
-                            child: rideController.pendingRideRequestModel!
-                                            .data![index!].id ==
-                                        rideController.onPressedTripId &&
-                                    rideController.accepting
-                                ? SpinKitCircle(
-                                    color: Theme.of(context).primaryColor,
-                                    size: 40.0)
-                                : Row(children: [
-                                    Expanded(
-                                        child: ButtonWidget(
-                                      buttonText: _isShowBidButton(rideRequest)
-                                          ? 'bid'.tr
-                                          : 'reject'.tr,
-                                      transparent: true,
-                                      borderWidth: 1,
-                                      showBorder: _isShowBidButton(rideRequest)
-                                          ? true
-                                          : false,
-                                      radius: Dimensions.paddingSizeSmall,
-                                      borderColor:
-                                          Theme.of(Get.context!).primaryColor,
-                                      backgroundColor:
-                                          _isShowBidButton(rideRequest)
-                                              ? null
-                                              : Theme.of(context)
-                                                  .colorScheme
-                                                  .error
-                                                  .withValues(alpha: 0.1),
-                                      textColor: _isShowBidButton(rideRequest)
-                                          ? null
-                                          : Theme.of(context).colorScheme.error,
-                                      onPressed: () {
-                                        if (_isShowBidButton(rideRequest)) {
-                                          showDialog(
-                                            context: Get.context!,
-                                            builder: (_) => BiddingDialogWidget(
-                                                rideRequest: rideRequest),
-                                          );
-                                        } else {
-                                          Get.find<RideController>()
-                                              .tripAcceptOrRejected(
-                                            rideRequest.id!,
-                                            'rejected',
-                                            rideRequest.type ?? '',
-                                            rideRequest.parcelInformation
-                                                    ?.weight ??
-                                                '0',
-                                          )
-                                              .then((value) {
-                                            if (value.statusCode == 200) {
+                          return Column(
+                            children: [
+                              if (rideController.pendingDecisionTimerActive &&
+                                  rideController.pendingRideDecisionTripId ==
+                                      rideRequest.id)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      top: Dimensions.paddingSizeSmall),
+                                  child: Text(
+                                    'Réponse requise dans ${rideController.pendingRideDecisionRemainingSeconds}s',
+                                    style: textRegular.copyWith(
+                                      color: Theme.of(context).primaryColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: Dimensions.paddingSizeDefault,
+                                  vertical: Dimensions.paddingSizeDefault,
+                                ),
+                                child: rideController.pendingRideRequestModel!
+                                                .data![index!].id ==
+                                            rideController.onPressedTripId &&
+                                        rideController.accepting
+                                    ? SpinKitCircle(
+                                        color: Theme.of(context).primaryColor,
+                                        size: 40.0)
+                                    : Row(children: [
+                                        Expanded(
+                                            child: ButtonWidget(
+                                          buttonText:
+                                              _isShowBidButton(rideRequest)
+                                                  ? 'bid'.tr
+                                                  : 'reject'.tr,
+                                          transparent: true,
+                                          borderWidth: 1,
+                                          showBorder:
+                                              _isShowBidButton(rideRequest)
+                                                  ? true
+                                                  : false,
+                                          radius: Dimensions.paddingSizeSmall,
+                                          borderColor: Theme.of(Get.context!)
+                                              .primaryColor,
+                                          backgroundColor:
+                                              _isShowBidButton(rideRequest)
+                                                  ? null
+                                                  : Theme.of(context)
+                                                      .colorScheme
+                                                      .error
+                                                      .withValues(alpha: 0.1),
+                                          textColor:
+                                              _isShowBidButton(rideRequest)
+                                                  ? null
+                                                  : Theme.of(context)
+                                                      .colorScheme
+                                                      .error,
+                                          onPressed: () {
+                                            if (_isShowBidButton(rideRequest)) {
+                                              showDialog(
+                                                context: Get.context!,
+                                                builder: (_) =>
+                                                    BiddingDialogWidget(
+                                                        rideRequest:
+                                                            rideRequest),
+                                              );
+                                            } else {
                                               Get.find<RideController>()
-                                                  .getPendingRideRequestList(1);
-                                              if (fromList) {
-                                                Get.find<RideController>()
-                                                    .ongoingTripList()
-                                                    .then((value) async {
-                                                  if ((Get.find<RideController>()
-                                                              .ongoingTrip ??
-                                                          [])
-                                                      .isEmpty) {
-                                                    Get.find<
-                                                            RiderMapController>()
-                                                        .setRideCurrentState(
-                                                            RideState.initial);
-                                                  } else {
-                                                    Get.back(
-                                                        closeOverlays: true);
-                                                  }
-                                                });
-                                              }
-                                            }
-                                          });
-                                        }
-                                      },
-                                    )),
-                                    const SizedBox(
-                                        width: Dimensions.paddingSizeLarge),
-                                    Expanded(
-                                        child: ButtonWidget(
-                                      buttonText: 'accept'.tr,
-                                      radius: Dimensions.paddingSizeSmall,
-                                      onPressed: () async {
-                                        if (!Get.find<RideController>()
-                                            .canAcceptTripWithWalletGuard(
-                                                rideRequest)) {
-                                          return;
-                                        }
-                                        Get.find<RideController>()
-                                            .tripAcceptOrRejected(
+                                                  .tripAcceptOrRejected(
                                                 rideRequest.id!,
-                                                'accepted',
+                                                'rejected',
                                                 rideRequest.type ?? '',
                                                 rideRequest.parcelInformation
                                                         ?.weight ??
                                                     '0',
-                                                showSuccess: false)
-                                            .then((value) {
-                                          if (value.statusCode == 200) {
-                                            Get.find<RideController>()
-                                                .ongoingTripList()
-                                                .then((value) async {
-                                              if ((Get.find<RideController>()
-                                                              .ongoingTrip ??
-                                                          [])
-                                                      .length <=
-                                                  1) {
+                                              )
+                                                  .then((value) {
                                                 if (value.statusCode == 200) {
-                                                  Get.find<AuthController>()
-                                                      .saveRideCreatedTime();
+                                                  Get.find<RideController>()
+                                                      .getPendingRideRequestList(
+                                                          1);
                                                   if (fromList) {
                                                     Get.find<RideController>()
-                                                        .getRideDetails(
-                                                            rideRequest.id!)
+                                                        .ongoingTripList()
                                                         .then((value) async {
-                                                      if (value.statusCode ==
-                                                          200) {
+                                                      if ((Get.find<RideController>()
+                                                                  .ongoingTrip ??
+                                                              [])
+                                                          .isEmpty) {
+                                                        Get.find<
+                                                                RiderMapController>()
+                                                            .setRideCurrentState(
+                                                                RideState
+                                                                    .initial);
+                                                      } else {
+                                                        Get.back(
+                                                            closeOverlays:
+                                                                true);
+                                                      }
+                                                    });
+                                                  }
+                                                }
+                                              });
+                                            }
+                                          },
+                                        )),
+                                        const SizedBox(
+                                            width: Dimensions.paddingSizeLarge),
+                                        Expanded(
+                                            child: ButtonWidget(
+                                          buttonText: 'accept'.tr,
+                                          radius: Dimensions.paddingSizeSmall,
+                                          onPressed: () async {
+                                            if (!Get.find<RideController>()
+                                                .canAcceptTripWithWalletGuard(
+                                                    rideRequest)) {
+                                              return;
+                                            }
+                                            Get.find<RideController>()
+                                                .tripAcceptOrRejected(
+                                                    rideRequest.id!,
+                                                    'accepted',
+                                                    rideRequest.type ?? '',
+                                                    rideRequest
+                                                            .parcelInformation
+                                                            ?.weight ??
+                                                        '0',
+                                                    showSuccess: false)
+                                                .then((value) {
+                                              if (value.statusCode == 200) {
+                                                Get.find<RideController>()
+                                                    .ongoingTripList()
+                                                    .then((value) async {
+                                                  if ((Get.find<RideController>()
+                                                                  .ongoingTrip ??
+                                                              [])
+                                                          .length <=
+                                                      1) {
+                                                    if (value.statusCode ==
+                                                        200) {
+                                                      Get.find<AuthController>()
+                                                          .saveRideCreatedTime();
+                                                      if (fromList) {
+                                                        Get.find<
+                                                                RideController>()
+                                                            .getRideDetails(
+                                                                rideRequest.id!)
+                                                            .then(
+                                                                (value) async {
+                                                          if (value
+                                                                  .statusCode ==
+                                                              200) {
+                                                            if (rideRequest
+                                                                    .type ==
+                                                                AppConstants
+                                                                    .scheduleRequest) {
+                                                              Get.find<
+                                                                      RiderMapController>()
+                                                                  .setRideCurrentState(
+                                                                      RideState
+                                                                          .accepted);
+                                                            } else {
+                                                              Get.find<
+                                                                      RiderMapController>()
+                                                                  .setRideCurrentState(
+                                                                      RideState
+                                                                          .outForPickup);
+                                                            }
+                                                            Get.find<
+                                                                    RideController>()
+                                                                .updateRoute(
+                                                                    false,
+                                                                    notify:
+                                                                        true);
+                                                            Get.to(() =>
+                                                                const MapScreen());
+                                                          }
+                                                        });
+                                                      } else {
+                                                        Get.dialog(
+                                                            const BidAcceptingDialogueWidget(),
+                                                            barrierDismissible:
+                                                                false);
+                                                        await Future.delayed(
+                                                            const Duration(
+                                                                seconds: 5));
+                                                        Get.back();
                                                         if (rideRequest.type ==
                                                             AppConstants
                                                                 .scheduleRequest) {
@@ -620,70 +708,42 @@ class CustomerRideRequestCardWidget extends StatelessWidget {
                                                                   RideState
                                                                       .outForPickup);
                                                         }
-                                                        Get.find<
-                                                                RideController>()
-                                                            .updateRoute(false,
-                                                                notify: true);
                                                         Get.to(() =>
                                                             const MapScreen());
                                                       }
-                                                    });
-                                                  } else {
-                                                    Get.dialog(
-                                                        const BidAcceptingDialogueWidget(),
-                                                        barrierDismissible:
-                                                            false);
-                                                    await Future.delayed(
-                                                        const Duration(
-                                                            seconds: 5));
-                                                    Get.back();
-                                                    if (rideRequest.type ==
-                                                        AppConstants
-                                                            .scheduleRequest) {
-                                                      Get.find<
-                                                              RiderMapController>()
-                                                          .setRideCurrentState(
-                                                              RideState
-                                                                  .accepted);
-                                                    } else {
-                                                      Get.find<
-                                                              RiderMapController>()
-                                                          .setRideCurrentState(
-                                                              RideState
-                                                                  .outForPickup);
                                                     }
-                                                    Get.to(() =>
-                                                        const MapScreen());
+                                                  } else {
+                                                    Get.back();
+                                                    showCustomSnackBar(
+                                                        'you_accept_the_request'
+                                                            .tr,
+                                                        isError: false,
+                                                        subMessage:
+                                                            'after_complete_the_ongoing_trip'
+                                                                .tr);
+                                                    Get.find<RideController>()
+                                                        .getPendingRideRequestList(
+                                                            1);
                                                   }
-                                                }
+                                                });
                                               } else {
-                                                Get.back();
-                                                showCustomSnackBar(
-                                                    'you_accept_the_request'.tr,
-                                                    isError: false,
-                                                    subMessage:
-                                                        'after_complete_the_ongoing_trip'
-                                                            .tr);
-                                                Get.find<RideController>()
-                                                    .getPendingRideRequestList(
-                                                        1);
+                                                if (value.body[
+                                                        'response_code'] ==
+                                                    'maximum_amount_to_hold_cash_exceeds') {
+                                                  _customSnackBar();
+                                                } else {
+                                                  Get.dialog(
+                                                      TripAcceptWarningDialogWidget(
+                                                          errorText: value.body[
+                                                              'message']));
+                                                }
                                               }
                                             });
-                                          } else {
-                                            if (value.body['response_code'] ==
-                                                'maximum_amount_to_hold_cash_exceeds') {
-                                              _customSnackBar();
-                                            } else {
-                                              Get.dialog(
-                                                  TripAcceptWarningDialogWidget(
-                                                      errorText: value
-                                                          .body['message']));
-                                            }
-                                          }
-                                        });
-                                      },
-                                    )),
-                                  ]),
+                                          },
+                                        )),
+                                      ]),
+                              ),
+                            ],
                           );
                         }),
                       ]),

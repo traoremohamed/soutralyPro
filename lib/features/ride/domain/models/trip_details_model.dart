@@ -84,6 +84,12 @@ class TripDetail {
   String? rideStartTime;
   String? parcelStartTime;
   String? scheduledAt;
+  String? weatherCondition;
+  String? weatherDescription;
+  double? weatherCoefficient;
+  double? trafficCoefficient;
+  double? weatherTotalCoefficient;
+  double? weatherCost;
 
   TripDetail(
       {this.id,
@@ -154,6 +160,12 @@ class TripDetail {
       this.parcelStartTime,
       this.rideStartTime,
       this.scheduledAt,
+      this.weatherCondition,
+      this.weatherDescription,
+      this.weatherCoefficient,
+      this.trafficCoefficient,
+      this.weatherTotalCoefficient,
+      this.weatherCost,
       this.intermediateCoordinates});
 
   TripDetail.fromJson(Map<String, dynamic> json) {
@@ -319,6 +331,24 @@ class TripDetail {
     parcelStartTime = json['parcel_start_time'];
     parcelCompleteTime = json['parcel_complete_time'];
     scheduledAt = json['scheduled_at'];
+
+    weatherCondition = json['weather_condition'];
+    weatherDescription = json['weather_description'];
+    if (json['weather_coefficient'] != null) {
+      weatherCoefficient =
+          double.tryParse(json['weather_coefficient'].toString()) ?? 0;
+    }
+    if (json['traffic_coefficient'] != null) {
+      trafficCoefficient =
+          double.tryParse(json['traffic_coefficient'].toString()) ?? 0;
+    }
+    if (json['weather_total_coefficient'] != null) {
+      weatherTotalCoefficient =
+          double.tryParse(json['weather_total_coefficient'].toString()) ?? 0;
+    }
+    if (json['weather_cost'] != null) {
+      weatherCost = double.tryParse(json['weather_cost'].toString()) ?? 0;
+    }
   }
 
   static String? _normalizeJsonLikeValue(dynamic value) {

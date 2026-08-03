@@ -30,6 +30,7 @@ import 'package:ride_sharing_user_app/features/ride/controllers/ride_controller.
 import 'package:ride_sharing_user_app/features/splash/controllers/splash_controller.dart';
 import 'package:ride_sharing_user_app/common_widgets/snackbar_widget.dart';
 import 'package:flutter/foundation.dart';
+import 'package:ride_sharing_user_app/helper/otp_push_helper.dart';
 
 class AuthController extends GetxController implements GetxService {
   final AuthServiceInterface authServiceInterface;
@@ -516,8 +517,31 @@ class AuthController extends GetxController implements GetxService {
 
     Response? response = await authServiceInterface.sendOtp(
       phone: phone, fcmToken: fcmToken);
+
+    final dynamic otpPayloadRoot =
+        response?.body?['data'] ?? response?.body?['content'] ?? response?.body;
+    final dynamic pushSentLog =
+        otpPayloadRoot is Map ? otpPayloadRoot['push_sent'] : null;
+    final dynamic deliveryChannelLog =
+        otpPayloadRoot is Map ? otpPayloadRoot['delivery_channel'] : null;
+    final String otpFromApi =
+        otpPayloadRoot is Map ? (otpPayloadRoot['otp']?.toString() ?? '').trim() : '';
+
     debugPrint(
-      '[OTP_TRACE][sendOtp] response status=${response?.statusCode} push_sent=${response?.body?['content']?['push_sent']} delivery=${response?.body?['content']?['delivery_channel']} body=${response?.body}');
+      '[OTP_TRACE][sendOtp] response status=${response?.statusCode} push_sent=$pushSentLog delivery=$deliveryChannelLog body=${response?.body}');
+
+    if (response?.statusCode == 200 &&
+        otpFromApi.length == 6 &&
+        pushSentLog != true) {
+      debugPrint(
+          '[OTP_TRACE][sendOtp] push not delivered, fallback inject otp from API response');
+      await OtpPushHelper.captureData({
+        'type': 'OTP_VERIFICATION',
+        'action': 'otp_verification',
+        'otp': otpFromApi,
+      });
+    }
+
     if (response!.statusCode == 200) {
       _isOtpSending = false;
       showCustomSnackBar('otp_sent_successfully'.tr, isError: false);

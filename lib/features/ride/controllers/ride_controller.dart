@@ -36,6 +36,10 @@ class RideController extends GetxController implements GetxService {
   final FlutterTts _flutterTts = FlutterTts();
   DateTime? _lastTripCanceledAlertAt;
 
+  void _traceDispatch(String message) {
+    customPrint('[TRACE_DRIVER][RIDE] $message');
+  }
+
   int _orderStatusSelectedIndex = 0;
   int get orderStatusSelectedIndex => _orderStatusSelectedIndex;
   bool isLoading = false;
@@ -46,6 +50,13 @@ class RideController extends GetxController implements GetxService {
   double gracePeriodMinutes = 0;
   double waitingFeePerMin = 0;
   String? _pickupWaitingTripId;
+  Timer? _pendingRideDecisionTimer;
+  String? _pendingRideDecisionTripId;
+  int _pendingRideDecisionRemainingSeconds = 60;
+  bool get pendingDecisionTimerActive => _pendingRideDecisionTimer != null;
+  int get pendingRideDecisionRemainingSeconds =>
+      _pendingRideDecisionRemainingSeconds;
+  String? get pendingRideDecisionTripId => _pendingRideDecisionTripId;
 
   void resetPickupWaitingState({bool notify = false}) {
     _hasArrivedAtPickup = false;
@@ -57,6 +68,92 @@ class RideController extends GetxController implements GetxService {
     if (notify) {
       update();
     }
+  }
+
+  void cancelPendingRideDecisionTimer() {
+    _traceDispatch(
+        'cancelPendingRideDecisionTimer tripId=$_pendingRideDecisionTripId');
+    _pendingRideDecisionTimer?.cancel();
+    _pendingRideDecisionTimer = null;
+    _pendingRideDecisionRemainingSeconds = 60;
+    _pendingRideDecisionTripId = null;
+    update();
+  }
+
+  void startPendingRideDecisionTimer(String tripId) {
+    if (tripId.isEmpty) {
+      _traceDispatch('startPendingRideDecisionTimer ignored empty tripId');
+      return;
+    }
+
+    _traceDispatch(
+        'startPendingRideDecisionTimer tripId=$tripId currentRoute=${Get.currentRoute}');
+
+    if (_pendingRideDecisionTripId == tripId &&
+        _pendingRideDecisionTimer != null) {
+      _traceDispatch(
+          'startPendingRideDecisionTimer skipped already active tripId=$tripId');
+      return;
+    }
+
+    cancelPendingRideDecisionTimer();
+    _pendingRideDecisionTripId = tripId;
+    _pendingRideDecisionRemainingSeconds = 60;
+    _traceDispatch('startPendingRideDecisionTimer started tripId=$tripId');
+    _pendingRideDecisionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_pendingRideDecisionTripId != tripId) {
+        return;
+      }
+
+      if (_pendingRideDecisionRemainingSeconds <= 1) {
+        _traceDispatch('pending ride decision timer expired tripId=$tripId');
+        _pendingRideDecisionTimer?.cancel();
+        _pendingRideDecisionTimer = null;
+        _pendingRideDecisionRemainingSeconds = 0;
+        update();
+        _handlePendingRideDecisionTimeout(tripId);
+      } else {
+        _pendingRideDecisionRemainingSeconds--;
+        _traceDispatch(
+            'pending ride decision countdown tripId=$tripId remaining=$_pendingRideDecisionRemainingSeconds');
+        update();
+      }
+    });
+    update();
+  }
+
+  Future<void> _handlePendingRideDecisionTimeout(String tripId) async {
+    if (_pendingRideDecisionTripId != tripId) {
+      return;
+    }
+
+    _pendingRideDecisionTripId = null;
+    update();
+
+    TripDetail? pendingTrip;
+    for (final trip in (pendingRideRequestModel?.data ?? <TripDetail>[])) {
+      if (trip.id == tripId) {
+        pendingTrip = trip;
+        break;
+      }
+    }
+
+    customPrint(
+        '[TRACE_DRIVER][RIDE] pending ride decision timed out tripId=$tripId');
+    showCustomSnackBar(
+      'La course a expiré et a été réaffectée à un autre chauffeur.',
+      isError: false,
+      seconds: 4,
+    );
+
+    await tripAcceptOrRejected(
+      tripId,
+      'rejected',
+      pendingTrip?.type ?? tripDetail?.type ?? '',
+      pendingTrip?.parcelInformation?.weight?.toString() ?? '0',
+      showSuccess: false,
+      autoTimeout: true,
+    );
   }
 
   void _bindWaitingStateToTrip(String? tripId) {
@@ -328,6 +425,8 @@ class RideController extends GetxController implements GetxService {
         await rideServiceInterface.getRideDetailBeforeAccept(tripId);
     if (response.statusCode == 200) {
       tripDetail = TripDetailsModel.fromJson(response.body).data!;
+      _traceDispatch(
+          'getRideDetailBeforeAccept success tripId=$tripId currentStatus=${tripDetail?.currentStatus}');
       isLoading = false;
       polyline = tripDetail?.encodedPolyline ?? '';
       Get.find<RideController>().remainingDistance(tripId, mapBound: true);
@@ -380,7 +479,11 @@ class RideController extends GetxController implements GetxService {
   String? onPressedTripId;
   Future<Response> tripAcceptOrRejected(
       String tripId, String action, String type, String parcelWeight,
-      {bool showSuccess = true}) async {
+      {bool showSuccess = true, bool autoTimeout = false}) async {
+    if (tripId == _pendingRideDecisionTripId) {
+      cancelPendingRideDecisionTimer();
+    }
+
     if (action == 'accepted') {
       TripDetail? pendingTrip;
       for (final trip in (pendingRideRequestModel?.data ?? <TripDetail>[])) {
@@ -408,7 +511,12 @@ class RideController extends GetxController implements GetxService {
       Get.find<RiderMapController>().getPickupToDestinationPolyline();
       if (action == 'rejected') {
         await rideServiceInterface.ignoreMessage(tripId);
-        showCustomSnackBar('trip_is_rejected'.tr, isError: false);
+        showCustomSnackBar(
+          autoTimeout
+              ? 'La course a expiré et a été réaffectée à un autre chauffeur.'
+              : 'trip_is_rejected'.tr,
+          isError: false,
+        );
       } else {
         if (type == 'parcel') {
           totalParcelCount++;
@@ -630,6 +738,9 @@ class RideController extends GetxController implements GetxService {
   Future<Response> getPendingRideRequestList(int offset,
       {int limit = 10, bool isUpdate = false}) async {
     isLoading = true;
+    _traceDispatch(
+      'getPendingRideRequestList start baseUrl=${Get.find<SplashController>().config?.baseUrl ?? 'unknown'} endpoint=pending-ride-list offset=$offset limit=$limit pusher=${Get.find<SplashController>().pusherConnectionStatus}',
+    );
     if (isUpdate) {
       update();
     }
@@ -654,11 +765,23 @@ class RideController extends GetxController implements GetxService {
       }
 
       isLoading = false;
+      final int count = pendingRideRequestModel?.data?.length ?? 0;
+      final List<String> ids = (pendingRideRequestModel?.data ?? [])
+          .map((e) => e.id?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .take(5)
+          .toList();
+      _traceDispatch(
+        'getPendingRideRequestList success status=${response.statusCode} count=$count first_ids=${ids.join(',')}',
+      );
     } else {
       pendingRideRequestModel?.data = [];
       pendingRideRequestModel?.totalSize = 0;
       pendingRideRequestModel?.offset = '1';
       isLoading = false;
+      _traceDispatch(
+        'getPendingRideRequestList failed status=${response.statusCode} body=${response.body}',
+      );
       if (!(Get.find<ProfileController>().profileInfo?.vehicle == null &&
           Get.find<ProfileController>().isFirstTimeShowBottomSheet)) {
         ApiChecker.checkApi(response);

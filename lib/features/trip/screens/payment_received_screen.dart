@@ -453,6 +453,19 @@ class _PaymentReceivedScreenState extends State<PaymentReceivedScreen>
                                       amount: totalWaitingFeeAmount,
                                       payableRounded: true,
                                     ),
+                                  if ((finalFareController
+                                              .finalFare?.weatherCost ??
+                                          0) >
+                                      0)
+                                    PaymentItemInfoWidget(
+                                      icon: Images.farePrice,
+                                      title:
+                                          'Majoration meteo/trafic (${(finalFareController.finalFare?.weatherTotalCoefficient ?? 0).toStringAsFixed(3)})',
+                                      amount: finalFareController
+                                              .finalFare?.weatherCost ??
+                                          0,
+                                      payableRounded: true,
+                                    ),
                                   if (finalFareController
                                           .finalFare!.couponAmount!
                                           .toDouble() >

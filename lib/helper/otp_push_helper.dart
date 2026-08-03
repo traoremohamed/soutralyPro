@@ -9,6 +9,17 @@ class OtpPushHelper {
   static final StreamController<String> _otpStreamController =
       StreamController<String>.broadcast();
   static final RegExp _sixDigitsRegExp = RegExp(r'\b\d{6}\b');
+  static final List<String> _otpKeywords = <String>[
+    'otp',
+    'code',
+    'verification',
+    'verification code',
+    'verif',
+    'verif code',
+    'vérification',
+    'code de verification',
+    'code de vérification',
+  ];
 
   static Stream<String> get otpStream => _otpStreamController.stream;
 
@@ -24,21 +35,29 @@ class OtpPushHelper {
   }
 
   static Future<void> captureRemoteMessage(RemoteMessage message) async {
-    debugPrint('[OTP_TRACE][push] captureRemoteMessage data=${message.data}');
-    await captureData(message.data);
+    final Map<String, dynamic> merged = Map<String, dynamic>.from(message.data);
+
+    if ((merged['title']?.toString().trim().isEmpty ?? true) &&
+        (message.notification?.title?.trim().isNotEmpty ?? false)) {
+      merged['title'] = message.notification?.title;
+    }
+    if ((merged['body']?.toString().trim().isEmpty ?? true) &&
+        (message.notification?.body?.trim().isNotEmpty ?? false)) {
+      merged['body'] = message.notification?.body;
+    }
+
+    debugPrint('[OTP_TRACE][push] captureRemoteMessage data=${message.data} notifTitle=${message.notification?.title} notifBody=${message.notification?.body}');
+    await captureData(merged);
   }
 
   static Future<void> captureData(Map<String, dynamic> data) async {
     debugPrint('[OTP_TRACE][push] captureData start action=${data['action']} type=${data['type']} status=${data['status']}');
     final String rawText =
         '${data['body']?.toString() ?? ''} ${data['message']?.toString() ?? ''} ${data['title']?.toString() ?? ''}';
-    final bool hasOtpKeyword = rawText.toLowerCase().contains('otp');
+    final String loweredRaw = rawText.toLowerCase();
+    final bool hasOtpKeyword =
+        _otpKeywords.any((keyword) => loweredRaw.contains(keyword));
     debugPrint('[OTP_TRACE][push] raw_has_otp_keyword=$hasOtpKeyword raw="$rawText"');
-
-    if (!isOtpMessage(data) && !hasOtpKeyword) {
-      debugPrint('[OTP_TRACE][push] ignored: not an otp message');
-      return;
-    }
 
     String otpCode = (data['code']?.toString() ?? '').trim();
     if (otpCode.isEmpty) {
@@ -58,8 +77,10 @@ class OtpPushHelper {
 
     debugPrint('[OTP_TRACE][push] extracted_code="$otpCode" length=${otpCode.length}');
 
-    if (otpCode.length != 6) {
-      debugPrint('[OTP_TRACE][push] ignored: invalid otp length');
+    final bool looksLikeOtpMessage = isOtpMessage(data) || hasOtpKeyword;
+
+    if (otpCode.length != 6 || !looksLikeOtpMessage) {
+      debugPrint('[OTP_TRACE][push] ignored: invalid otp candidate (length=${otpCode.length}, looksLikeOtpMessage=$looksLikeOtpMessage)');
       return;
     }
 

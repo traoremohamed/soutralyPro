@@ -65,6 +65,8 @@ class RiderMapController extends GetxController implements GetxService {
 
   RideState currentRideState = RideState.initial;
   void setRideCurrentState(RideState newState, {bool notify = true}) {
+    debugPrint(
+        '[MAP_DEBUG] setRideCurrentState old=$currentRideState new=$newState notify=$notify');
     currentRideState = newState;
     if (currentRideState == RideState.initial) {
       initializeData();

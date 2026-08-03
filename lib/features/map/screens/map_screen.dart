@@ -54,8 +54,10 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     debugPrint(
         '[MAP_DEBUG] currentRideState = ${Get.find<RiderMapController>().currentRideState}');
     final RideController rideController = Get.find<RideController>();
-    final RiderMapController riderMapController = Get.find<RiderMapController>();
-    final bool hasActiveTripId = rideController.tripDetail?.id?.isNotEmpty ?? false;
+    final RiderMapController riderMapController =
+        Get.find<RiderMapController>();
+    final bool hasActiveTripId =
+        rideController.tripDetail?.id?.isNotEmpty ?? false;
 
     if (riderMapController.currentRideState != RideState.initial &&
         !hasActiveTripId) {
@@ -69,6 +71,12 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         riderMapController.currentRideState == RideState.initial ? 300 : 270,
         false);
     rideController.getPendingRideRequestList(1);
+    if (riderMapController.currentRideState == RideState.pending &&
+        (rideController.rideId?.isNotEmpty ?? false) &&
+        rideController.tripDetail == null) {
+      rideController.startPendingRideDecisionTimer(rideController.rideId!);
+      rideController.getRideDetailBeforeAccept(rideController.rideId!);
+    }
     if (riderMapController.currentRideState != RideState.initial &&
         hasActiveTripId) {
       debugPrint(
@@ -249,7 +257,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
                               'initial') {
                             final RideController rideController =
                                 Get.find<RideController>();
-                            final String? tripId = rideController.tripDetail?.id;
+                            final String? tripId =
+                                rideController.tripDetail?.id;
                             if (riderMapController.currentRideState.name ==
                                     RideState.pending.name ||
                                 riderMapController.currentRideState.name ==
@@ -496,7 +505,8 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
   void _setMapCurrentRoutes() async {
     final RideController rideController = Get.find<RideController>();
-    final RiderMapController riderMapController = Get.find<RiderMapController>();
+    final RiderMapController riderMapController =
+        Get.find<RiderMapController>();
     final String? tripId = rideController.tripDetail?.id;
 
     if (tripId == null || tripId.isEmpty) {

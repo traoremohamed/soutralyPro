@@ -36,19 +36,60 @@ class LocationController extends GetxController implements GetxService {
   LatLng get initialPosition => _initialPosition;
 
   StreamSubscription? _locationSubscription;
+  Completer<Position>? _ongoingGetCurrentLocation;
+  DateTime? _lastGetCurrentLocationAt;
+  static const Duration _getCurrentLocationDebounceWindow =
+      Duration(milliseconds: 700);
+
+  Future<Position> _getCurrentPositionWithFallback() async {
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+    } catch (_) {
+      try {
+        return await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 6),
+          ),
+        );
+      } catch (_) {
+        return (await Geolocator.getLastKnownPosition()) ?? _position;
+      }
+    }
+  }
+
   Future<Position> getCurrentLocation(
       {bool isAnimate = true,
       GoogleMapController? mapController,
       bool callZone = true}) async {
     debugPrint('[MAP_DEBUG] LocationController.getCurrentLocation() appelé');
+
+    final now = DateTime.now();
+    if (_ongoingGetCurrentLocation != null) {
+      debugPrint(
+          '[MAP_DEBUG] getCurrentLocation: requete deja en cours, reuse');
+      return _ongoingGetCurrentLocation!.future;
+    }
+    if (_lastGetCurrentLocationAt != null &&
+        now.difference(_lastGetCurrentLocationAt!) <
+            _getCurrentLocationDebounceWindow) {
+      debugPrint(
+          '[MAP_DEBUG] getCurrentLocation: debounce, retour position cachee');
+      return _position;
+    }
+    _lastGetCurrentLocationAt = now;
+    _ongoingGetCurrentLocation = Completer<Position>();
+
     bool isSuccess = await checkPermission();
     debugPrint('[MAP_DEBUG] checkPermission() retourne: $isSuccess');
     if (isSuccess) {
       try {
-        var location = await Geolocator.getCurrentPosition(
-            locationSettings: LocationSettings(
-                accuracy: LocationAccuracy.high,
-                timeLimit: const Duration(seconds: 5)));
+        final Position location = await _getCurrentPositionWithFallback();
 
         Get.find<RiderMapController>().updateMarkerAndCircle(
             LatLng(location.latitude, location.longitude));
@@ -56,11 +97,7 @@ class LocationController extends GetxController implements GetxService {
         if (_locationSubscription != null) {
           _locationSubscription!.cancel();
         }
-        Position newLocalData = await Geolocator.getCurrentPosition(
-            locationSettings: LocationSettings(
-                accuracy: LocationAccuracy.high,
-                timeLimit: const Duration(seconds: 5)));
-        _position = newLocalData;
+        _position = location;
         _initialPosition = LatLng(_position.latitude, _position.longitude);
         debugPrint(
             '[MAP_DEBUG] ✅ Position mise à jour: lat=${_position.latitude}, lng=${_position.longitude}');
@@ -98,7 +135,13 @@ class LocationController extends GetxController implements GetxService {
           print('');
         }
         _position = (await Geolocator.getLastKnownPosition()) ?? _position;
+      } finally {
+        _ongoingGetCurrentLocation?.complete(_position);
+        _ongoingGetCurrentLocation = null;
       }
+    } else {
+      _ongoingGetCurrentLocation?.complete(_position);
+      _ongoingGetCurrentLocation = null;
     }
     return _position;
   }

@@ -46,6 +46,51 @@ class NotificationHelper {
   static final Map<String, DateTime> _lastIncomingAlertAtByTrip = {};
   static const Duration _incomingAlertCooldown = Duration(seconds: 4);
 
+  static Future<void> _tryFcmRideFallbackWhenPusherConnected(
+      RemoteMessage message) async {
+    final String action = message.data['action'] ?? '';
+    if (action != 'new_ride_request' && action != 'new_parcel_request') {
+      return;
+    }
+
+    final String tripId = (message.data['ride_request_id'] ?? '').toString();
+    if (tripId.isEmpty) {
+      _dispatchLog(
+          'pusher connected fallback skipped: empty trip_id for action=$action');
+      return;
+    }
+
+    _dispatchLog(
+        'pusher connected: defer duplicate check for trip_id=$tripId action=$action');
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    try {
+      final RideController rideController = Get.find<RideController>();
+      final RiderMapController mapController = Get.find<RiderMapController>();
+
+      final bool alreadyHandledByRealtimePath =
+          rideController.pendingRideDecisionTripId == tripId ||
+              rideController.rideId == tripId ||
+              rideController.tripDetail?.id == tripId ||
+              (mapController.currentRideState == RideState.pending &&
+                  (rideController.pendingDecisionTimerActive ||
+                      (rideController.rideId?.isNotEmpty ?? false)));
+
+      if (alreadyHandledByRealtimePath) {
+        _dispatchLog(
+            'pusher connected fallback skipped: trip already handled trip_id=$tripId');
+        return;
+      }
+
+      _dispatchLog(
+          'pusher connected but no realtime handling detected: fallback via FCM trip_id=$tripId');
+      _whenNewRequestFound(message);
+    } catch (e) {
+      _dispatchLog('pusher connected fallback failed trip_id=$tripId error=$e');
+    }
+  }
+
   static void _dispatchLog(String message) {
     customPrint('[DISPATCH][NOTIF] $message');
   }
@@ -130,7 +175,8 @@ class NotificationHelper {
       customPrint('[OTP_TRACE][notif][onMessage] data=${message.data}');
       OtpPushHelper.captureRemoteMessage(message);
       if (OtpPushHelper.isOtpMessage(message.data)) {
-        customPrint('[OTP_TRACE][notif][onMessage] otp message detected, skip non-otp routing');
+        customPrint(
+            '[OTP_TRACE][notif][onMessage] otp message detected, skip non-otp routing');
         return;
       }
 
@@ -268,7 +314,8 @@ class NotificationHelper {
           ///If web socket Not connected
         } else {
           _dispatchLog(
-              'pusher connected: skipping duplicate new_ride_request handling from FCM');
+              'pusher connected: skip direct duplicate path and monitor fallback');
+          _tryFcmRideFallbackWhenPusherConnected(message);
           if (message.data['action'] == "bid_accepted") {
             ///Bid Ride Accepted in this case....
             _whenCustomerBidAccept(message);
@@ -714,7 +761,8 @@ Future<dynamic> myBackgroundMessageHandler(RemoteMessage remoteMessage) async {
 
   if (remoteMessage.data.isNotEmpty) {
     if (OtpPushHelper.isOtpMessage(remoteMessage.data)) {
-      customPrint('[OTP_TRACE][notif][background] otp message detected, local notification suppressed');
+      customPrint(
+          '[OTP_TRACE][notif][background] otp message detected, local notification suppressed');
       return;
     }
 
@@ -761,6 +809,13 @@ void _whenNewRequestFound(RemoteMessage message) {
     source: 'fcm._whenNewRequestFound',
   );
 
+  final String? tripId = message.data['ride_request_id']?.toString();
+  customPrint(
+      '[DISPATCH][NOTIF] _whenNewRequestFound startTimer tripId=$tripId route=${Get.currentRoute}');
+  if (tripId != null && tripId.isNotEmpty) {
+    Get.find<RideController>().startPendingRideDecisionTimer(tripId);
+  }
+
   Get.find<RideController>().ongoingTripList().then((value) {
     if ((Get.find<RideController>().ongoingTrip ?? []).isEmpty) {
       Get.find<RideController>().getPendingRideRequestList(1);
@@ -777,7 +832,12 @@ void _whenNewRequestFound(RemoteMessage message) {
               incomingTrip: Get.find<RideController>().tripDetail);
           Get.find<RiderMapController>().setRideCurrentState(RideState.pending);
           Get.find<RideController>().updateRoute(false, notify: true);
-          Get.to(() => const MapScreen());
+          if (Get.currentRoute == '/MapScreen') {
+            Get.find<RiderMapController>()
+                .setRideCurrentState(RideState.pending);
+          } else {
+            Get.to(() => const MapScreen());
+          }
         } else {
           customPrint(
               '[DISPATCH][NOTIF] ride detail load failed status=${value.statusCode} ride_request_id=${message.data['ride_request_id']}');

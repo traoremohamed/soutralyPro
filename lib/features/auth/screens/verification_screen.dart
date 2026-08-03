@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:get/get.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:sms_autofill/sms_autofill.dart';
 import 'package:ride_sharing_user_app/features/auth/domain/enums/verification_from_enum.dart';
 import 'package:ride_sharing_user_app/util/dimensions.dart';
 import 'package:ride_sharing_user_app/util/images.dart';
@@ -33,7 +33,7 @@ class VerificationScreen extends StatefulWidget {
   State<VerificationScreen> createState() => _VerificationScreenState();
 }
 
-class _VerificationScreenState extends State<VerificationScreen> {
+class _VerificationScreenState extends State<VerificationScreen> with CodeAutoFill {
   TextEditingController pinController = TextEditingController();
   Timer? _timer;
   int? _seconds = 0;
@@ -48,11 +48,28 @@ class _VerificationScreenState extends State<VerificationScreen> {
     Get.find<AuthController>().clearVerificationCode(isUpdate: false);
     _startTimer();
     _otpSubscription = OtpPushHelper.otpStream.listen(_applyOtpCode);
+
+    if (GetPlatform.isAndroid) {
+      listenForCode();
+      SmsAutoFill().getAppSignature.then((signature) {
+        debugPrint('[OTP_TRACE][sms] app_signature=$signature');
+      }).catchError((e) {
+        debugPrint('[OTP_TRACE][sms] app_signature_error=$e');
+      });
+    }
+
     OtpPushHelper.getPendingOtp().then((otpCode) {
       if (otpCode != null && otpCode.isNotEmpty) {
         _applyOtpCode(otpCode);
       }
     });
+  }
+
+  @override
+  void codeUpdated() {
+    final String smsCode = (code ?? '').trim();
+    debugPrint('[OTP_TRACE][sms] codeUpdated code="$smsCode"');
+    _applyOtpCode(smsCode);
   }
 
   void _applyOtpCode(String otpCode) {
@@ -82,10 +99,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   @override
   void dispose() {
-    super.dispose();
+    cancel();
     _otpSubscription?.cancel();
     _errorController.close();
     _timer?.cancel();
+    super.dispose();
   }
 
   @override

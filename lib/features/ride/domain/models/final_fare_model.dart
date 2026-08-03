@@ -68,6 +68,10 @@ class FinalFare {
   String? parcelCompleteTime;
   String? rideStartTime;
   String? parcelStartTime;
+  double? weatherCoefficient;
+  double? trafficCoefficient;
+  double? weatherTotalCoefficient;
+  double? weatherCost;
 
   FinalFare(
       {this.id,
@@ -118,7 +122,11 @@ class FinalFare {
       this.rideCompleteTime,
       this.parcelCompleteTime,
       this.parcelStartTime,
-      this.rideStartTime});
+      this.rideStartTime,
+      this.weatherCoefficient,
+      this.trafficCoefficient,
+      this.weatherTotalCoefficient,
+      this.weatherCost});
 
   FinalFare.fromJson(Map<String, dynamic> json) {
     id = json['id'];
@@ -236,6 +244,18 @@ class FinalFare {
     rideStartTime = json['ride_start_time'];
     parcelStartTime = json['parcel_start_time'];
     parcelCompleteTime = json['parcel_complete_time'];
+    if (json['weather_coefficient'] != null) {
+      weatherCoefficient = json['weather_coefficient'].toDouble();
+    }
+    if (json['traffic_coefficient'] != null) {
+      trafficCoefficient = json['traffic_coefficient'].toDouble();
+    }
+    if (json['weather_total_coefficient'] != null) {
+      weatherTotalCoefficient = json['weather_total_coefficient'].toDouble();
+    }
+    if (json['weather_cost'] != null) {
+      weatherCost = json['weather_cost'].toDouble();
+    }
   }
 
   static String? _normalizeJsonLikeValue(dynamic value) {

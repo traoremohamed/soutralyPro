@@ -41,7 +41,21 @@ class PusherHelper {
   static String _resolveWsHost() {
     final config = Get.find<SplashController>().config;
     final fromWebsocketUrl = _extractHost(config?.webSocketUrl);
-    if (fromWebsocketUrl.isNotEmpty) return fromWebsocketUrl;
+    final fromConstant = Uri.parse(AppConstants.baseUrl).host;
+    if (fromWebsocketUrl.isNotEmpty) {
+      final wsHost = fromWebsocketUrl.toLowerCase();
+      final apiHost = fromConstant.toLowerCase();
+      // Keep dedicated websocket host (ex: ws.domain.com). Only override
+      // legacy www host when it mismatches the API host.
+      if (fromConstant.isNotEmpty &&
+          wsHost != apiHost &&
+          wsHost.startsWith('www.')) {
+        _dispatchLog(
+            'webSocketUrl legacy mismatch ($fromWebsocketUrl != $fromConstant), fallback host=$fromConstant');
+        return fromConstant;
+      }
+      return fromWebsocketUrl;
+    }
 
     final fromBaseUrl = _extractHost(config?.baseUrl);
     if (fromBaseUrl.isNotEmpty) {
@@ -50,7 +64,6 @@ class PusherHelper {
       return fromBaseUrl;
     }
 
-    final fromConstant = Uri.parse(AppConstants.baseUrl).host;
     _dispatchLog(
         'webSocketUrl/baseUrl vides, fallback host depuis AppConstants=$fromConstant');
     return fromConstant;
@@ -156,6 +169,8 @@ class PusherHelper {
 
         driverTripSubscribe.bind(eventName).listen((event) {
           _dispatchLog('event received name=$eventName payload=${event.data}');
+          _dispatchLog(
+              'driverTripRequestSubscribe state currentRoute=${Get.currentRoute} pusherStatus=${Get.find<SplashController>().pusherConnectionStatus}');
 
           Map<String, dynamic> eventData;
           try {
@@ -176,10 +191,15 @@ class PusherHelper {
             source: 'pusher.event',
           );
 
+          _dispatchLog(
+              'pusher trip request accepted path tripId=$tripId route=${Get.currentRoute}');
+          Get.find<RideController>().startPendingRideDecisionTimer(tripId);
+
           Get.find<RideController>().ongoingTripList().then((value) {
             if ((Get.find<RideController>().ongoingTrip ?? []).isEmpty) {
               Get.find<RideController>().getPendingRideRequestList(1);
               Get.find<RideController>().setRideId(tripId);
+              _dispatchLog('pusher pending state prepared tripId=$tripId');
               Get.find<RiderMapController>()
                   .setRideCurrentState(RideState.pending, notify: false);
               Get.find<RideController>()
@@ -189,10 +209,17 @@ class PusherHelper {
                   Get.find<RideController>().playIncomingRideAlert(
                       incomingTrip: Get.find<RideController>().tripDetail);
                   _dispatchLog('ride details loaded for trip_id=$tripId');
+                  _dispatchLog(
+                      'pusher will navigate to MapScreen tripId=$tripId currentRoute=${Get.currentRoute}');
                   Get.find<RiderMapController>()
                       .setRideCurrentState(RideState.pending);
                   Get.find<RideController>().updateRoute(false, notify: true);
-                  Get.to(() => const MapScreen());
+                  if (Get.currentRoute == '/MapScreen') {
+                    Get.find<RiderMapController>()
+                        .setRideCurrentState(RideState.pending);
+                  } else {
+                    Get.to(() => const MapScreen());
+                  }
                 } else {
                   _dispatchLog(
                       'ride details load failed status=${value.statusCode} trip_id=$tripId');

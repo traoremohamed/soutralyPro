@@ -28,11 +28,15 @@ class PaymentDetailsWidget extends StatelessWidget {
     final waitingFeeAmount = _toDouble(tripDetail?.waitingFee);
     final idleFeeAmount = _toDouble(tripDetail?.idleFee);
     final delayFeeAmount = _toDouble(tripDetail?.delayFee);
+    final weatherCostAmount = _toDouble(tripDetail?.weatherCost);
+    final weatherTotalCoefficient =
+        _toDouble(tripDetail?.weatherTotalCoefficient);
     final totalWaitingFeeAmount =
         waitingFeeAmount + idleFeeAmount + delayFeeAmount;
 
     final subtotalAmount = (tripDetail?.distanceWiseFare ?? 0) +
-        (tripDetail?.type != 'parcel' ? totalWaitingFeeAmount : 0);
+        (tripDetail?.type != 'parcel' ? totalWaitingFeeAmount : 0) +
+        weatherCostAmount;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(
@@ -78,8 +82,17 @@ class PaymentDetailsWidget extends StatelessWidget {
         if (tripDetail?.type != 'parcel')
           PaymentItemInfoWidget(
             icon: Images.waitingPrice,
-            title: '${'waiting_fee'.tr} (${DateConverter.formatDurationHmsFromMinutes(totalWaitingMinutes)})',
+            title:
+                '${'waiting_fee'.tr} (${DateConverter.formatDurationHmsFromMinutes(totalWaitingMinutes)})',
             amount: totalWaitingFeeAmount,
+            payableRounded: true,
+          ),
+        if (weatherCostAmount > 0)
+          PaymentItemInfoWidget(
+            icon: Images.farePrice,
+            title:
+                'Majoration meteo/trafic (${weatherTotalCoefficient.toStringAsFixed(3)})',
+            amount: weatherCostAmount,
             payableRounded: true,
           ),
         /*
