@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -40,6 +41,31 @@ class RideController extends GetxController implements GetxService {
     customPrint('[TRACE_DRIVER][RIDE] $message');
   }
 
+  /// Safe update that avoids setState() during build phase.
+  /// If called during build, defers the update to next frame.
+  void _safeUpdate() {
+    try {
+      if (SchedulerBinding.instance.schedulerPhase ==
+          SchedulerPhase.persistentCallbacks) {
+        // Called during build - defer to next frame
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          try {
+            update();
+          } catch (e) {
+            customPrint(
+              '[TRACE_DRIVER][RIDE] _safeUpdate deferred update error: $e',
+            );
+          }
+        });
+      } else {
+        // Safe to update immediately
+        update();
+      }
+    } catch (e) {
+      customPrint('[TRACE_DRIVER][RIDE] _safeUpdate error: $e');
+    }
+  }
+
   int _orderStatusSelectedIndex = 0;
   int get orderStatusSelectedIndex => _orderStatusSelectedIndex;
   bool isLoading = false;
@@ -70,35 +96,77 @@ class RideController extends GetxController implements GetxService {
     }
   }
 
-  void cancelPendingRideDecisionTimer() {
+  void cancelPendingRideDecisionTimer({int resetToSeconds = 0}) {
+    final int sanitized = resetToSeconds.clamp(0, 300);
     _traceDispatch(
-        'cancelPendingRideDecisionTimer tripId=$_pendingRideDecisionTripId');
+      'cancelPendingRideDecisionTimer tripId=$_pendingRideDecisionTripId resetTo=$sanitized',
+    );
     _pendingRideDecisionTimer?.cancel();
     _pendingRideDecisionTimer = null;
-    _pendingRideDecisionRemainingSeconds = 60;
+    _pendingRideDecisionRemainingSeconds = sanitized;
     _pendingRideDecisionTripId = null;
-    update();
+    _safeUpdate();
   }
 
-  void startPendingRideDecisionTimer(String tripId) {
+  int _resolvePendingDecisionInitialSeconds({
+    required String tripId,
+    int? initialRemainingSeconds,
+  }) {
+    final int fallback = 60;
+    if (initialRemainingSeconds == null) {
+      return fallback;
+    }
+
+    final int sanitized = initialRemainingSeconds.clamp(1, 300);
+    _traceDispatch(
+      'pending decision initial seconds tripId=$tripId fromServer=$sanitized',
+    );
+    return sanitized;
+  }
+
+  int? _computeServerRemainingSeconds(TripDetail? trip) {
+    final String? raw = trip?.dispatchOfferExpiresAt;
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+
+    final DateTime? expiresAt = DateTime.tryParse(raw)?.toLocal();
+    if (expiresAt == null) {
+      return null;
+    }
+
+    final int seconds = expiresAt.difference(DateTime.now()).inSeconds;
+    return seconds > 0 ? seconds : 1;
+  }
+
+  void startPendingRideDecisionTimer(
+    String tripId, {
+    int? initialRemainingSeconds,
+  }) {
     if (tripId.isEmpty) {
       _traceDispatch('startPendingRideDecisionTimer ignored empty tripId');
       return;
     }
 
     _traceDispatch(
-        'startPendingRideDecisionTimer tripId=$tripId currentRoute=${Get.currentRoute}');
+      'startPendingRideDecisionTimer tripId=$tripId currentRoute=${Get.currentRoute}',
+    );
 
     if (_pendingRideDecisionTripId == tripId &&
         _pendingRideDecisionTimer != null) {
       _traceDispatch(
-          'startPendingRideDecisionTimer skipped already active tripId=$tripId');
+        'startPendingRideDecisionTimer skipped already active tripId=$tripId',
+      );
       return;
     }
 
-    cancelPendingRideDecisionTimer();
+    cancelPendingRideDecisionTimer(resetToSeconds: 0);
     _pendingRideDecisionTripId = tripId;
-    _pendingRideDecisionRemainingSeconds = 60;
+    _pendingRideDecisionRemainingSeconds =
+        _resolvePendingDecisionInitialSeconds(
+          tripId: tripId,
+          initialRemainingSeconds: initialRemainingSeconds,
+        );
     _traceDispatch('startPendingRideDecisionTimer started tripId=$tripId');
     _pendingRideDecisionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_pendingRideDecisionTripId != tripId) {
@@ -115,11 +183,12 @@ class RideController extends GetxController implements GetxService {
       } else {
         _pendingRideDecisionRemainingSeconds--;
         _traceDispatch(
-            'pending ride decision countdown tripId=$tripId remaining=$_pendingRideDecisionRemainingSeconds');
+          'pending ride decision countdown tripId=$tripId remaining=$_pendingRideDecisionRemainingSeconds',
+        );
         update();
       }
     });
-    update();
+    _safeUpdate();
   }
 
   Future<void> _handlePendingRideDecisionTimeout(String tripId) async {
@@ -139,7 +208,8 @@ class RideController extends GetxController implements GetxService {
     }
 
     customPrint(
-        '[TRACE_DRIVER][RIDE] pending ride decision timed out tripId=$tripId');
+      '[TRACE_DRIVER][RIDE] pending ride decision timed out tripId=$tripId',
+    );
     showCustomSnackBar(
       'La course a expiré et a été réaffectée à un autre chauffeur.',
       isError: false,
@@ -211,8 +281,8 @@ class RideController extends GetxController implements GetxService {
     AudioPlayer audio = AudioPlayer();
     await audio.play(AssetSource('notification.wav'));
 
-    final String categoryLabel =
-        (incomingTrip?.vehicleCategory?.name ?? '').trim();
+    final String categoryLabel = (incomingTrip?.vehicleCategory?.name ?? '')
+        .trim();
     final int orderPriority = incomingTrip?.vehicleCategory?.orderPriority ?? 1;
 
     if (categoryLabel.isNotEmpty) {
@@ -252,8 +322,9 @@ class RideController extends GetxController implements GetxService {
       await _flutterTts.setLanguage('fr-FR');
       await _flutterTts.setSpeechRate(0.46);
       await _flutterTts.setPitch(1.0);
-      await _flutterTts
-          .speak('Attention, la course a ete annulee par le client.');
+      await _flutterTts.speak(
+        'Attention, la course a ete annulee par le client.',
+      );
     } catch (_) {}
   }
 
@@ -270,8 +341,10 @@ class RideController extends GetxController implements GetxService {
     return expiry.toLocal().isAfter(DateTime.now());
   }
 
-  bool canAcceptTripWithWalletGuard(TripDetail? requestTrip,
-      {bool showDialog = true}) {
+  bool canAcceptTripWithWalletGuard(
+    TripDetail? requestTrip, {
+    bool showDialog = true,
+  }) {
     final profileController = Get.find<ProfileController>();
     if (isForfaitCurrentlyActive) {
       return true;
@@ -333,8 +406,10 @@ class RideController extends GetxController implements GetxService {
     }
   }
 
-  Future<Response> getRideDetails(String tripId,
-      {bool fromHomeScreen = false}) async {
+  Future<Response> getRideDetails(
+    String tripId, {
+    bool fromHomeScreen = false,
+  }) async {
     final ProfileController profileController = Get.find<ProfileController>();
     if (profileController.isWalletBlockedForTripActions) {
       profileController.checkZeroWalletPopup(forceShow: true);
@@ -368,7 +443,7 @@ class RideController extends GetxController implements GetxService {
         final bool hasServerWaitingState = waitingTime > 0 || delayFee > 0;
         final bool hasLocalArrivalForCurrentTrip =
             _pickupWaitingTripId == tripDetail?.id &&
-                (_hasArrivedAtPickup || arrivedAt != null);
+            (_hasArrivedAtPickup || arrivedAt != null);
 
         // Preserve local arrival state for the same trip. The backend can
         // still return waiting=0 immediately after marking arrival.
@@ -385,8 +460,10 @@ class RideController extends GetxController implements GetxService {
       Future.forEach(attachments, (element) async {
         if (element.file?.contains('.mp4') ?? false) {
           String? path = await generateThumbnail(element.file!);
-          _thumbnailPaths?[tripDetail!.parcelRefund!.attachments!
-              .indexOf(element)] = path ?? '';
+          _thumbnailPaths?[tripDetail!.parcelRefund!.attachments!.indexOf(
+                element,
+              )] =
+              path ?? '';
 
           update();
         }
@@ -402,8 +479,10 @@ class RideController extends GetxController implements GetxService {
   }
 
   Future<Response> uploadScreenShots(String tripId, XFile file) async {
-    Response response =
-        await rideServiceInterface.uploadScreenShots(tripId, file);
+    Response response = await rideServiceInterface.uploadScreenShots(
+      tripId,
+      file,
+    );
     if (response.statusCode == 200) {}
     update();
     return response;
@@ -421,12 +500,19 @@ class RideController extends GetxController implements GetxService {
     isLoading = true;
     update();
     await Get.find<LocationController>().getCurrentLocation(callZone: false);
-    Response response =
-        await rideServiceInterface.getRideDetailBeforeAccept(tripId);
+    Response response = await rideServiceInterface.getRideDetailBeforeAccept(
+      tripId,
+    );
     if (response.statusCode == 200) {
       tripDetail = TripDetailsModel.fromJson(response.body).data!;
+      final int? serverRemaining = _computeServerRemainingSeconds(tripDetail);
       _traceDispatch(
-          'getRideDetailBeforeAccept success tripId=$tripId currentStatus=${tripDetail?.currentStatus}');
+        'getRideDetailBeforeAccept success tripId=$tripId currentStatus=${tripDetail?.currentStatus} offeredDriver=${tripDetail?.currentOfferedDriverId} expiresAt=${tripDetail?.dispatchOfferExpiresAt} remainingFromServer=$serverRemaining',
+      );
+      startPendingRideDecisionTimer(
+        tripId,
+        initialRemainingSeconds: serverRemaining,
+      );
       isLoading = false;
       polyline = tripDetail?.encodedPolyline ?? '';
       Get.find<RideController>().remainingDistance(tripId, mapBound: true);
@@ -434,8 +520,26 @@ class RideController extends GetxController implements GetxService {
         print('polyline is ====> $polyline');
       }
     } else {
+      if (_pendingRideDecisionTripId == tripId) {
+        // Do not keep a stale countdown when the backend no longer serves this offer.
+        cancelPendingRideDecisionTimer(resetToSeconds: 0);
+      }
+      _traceDispatch(
+        'getRideDetailBeforeAccept failed tripId=$tripId status=${response.statusCode} body=${response.body}',
+      );
       isLoading = false;
-      ApiChecker.checkApi(response);
+
+      final dynamic responseCode = response.body is Map<String, dynamic>
+          ? response.body['response_code']
+          : null;
+      if (response.statusCode == 403 && responseCode == 'trip_request_403') {
+        // This can happen when an offer expires/reassigned between push reception and detail fetch.
+        _traceDispatch(
+          'getRideDetailBeforeAccept suppressed user popup for transient trip_request_403 tripId=$tripId',
+        );
+      } else {
+        ApiChecker.checkApi(response);
+      }
     }
 
     update();
@@ -454,6 +558,9 @@ class RideController extends GetxController implements GetxService {
       }
       if ((ongoingTrip ?? []).isEmpty) {
         resetPickupWaitingState();
+      } else {
+        // Driver has an ongoing trip: clear any pending-offer countdown.
+        cancelPendingRideDecisionTimer(resetToSeconds: 0);
       }
     } else {
       ApiChecker.checkApi(response);
@@ -478,11 +585,15 @@ class RideController extends GetxController implements GetxService {
   bool accepting = false;
   String? onPressedTripId;
   Future<Response> tripAcceptOrRejected(
-      String tripId, String action, String type, String parcelWeight,
-      {bool showSuccess = true, bool autoTimeout = false}) async {
-    if (tripId == _pendingRideDecisionTripId) {
-      cancelPendingRideDecisionTimer();
-    }
+    String tripId,
+    String action,
+    String type,
+    String parcelWeight, {
+    bool showSuccess = true,
+    bool autoTimeout = false,
+  }) async {
+    // Any explicit driver decision should clear the pending timer state.
+    cancelPendingRideDecisionTimer(resetToSeconds: 0);
 
     if (action == 'accepted') {
       TripDetail? pendingTrip;
@@ -493,10 +604,13 @@ class RideController extends GetxController implements GetxService {
         }
       }
       if (!canAcceptTripWithWalletGuard(pendingTrip)) {
-        return Response(statusCode: 403, body: {
-          'response_code': 'insufficient_wallet_balance_403',
-          'message': 'insufficient_wallet_balance_for_trip'.tr,
-        });
+        return Response(
+          statusCode: 403,
+          body: {
+            'response_code': 'insufficient_wallet_balance_403',
+            'message': 'insufficient_wallet_balance_for_trip'.tr,
+          },
+        );
       }
     }
 
@@ -504,8 +618,10 @@ class RideController extends GetxController implements GetxService {
 
     accepting = true;
     update();
-    Response response =
-        await rideServiceInterface.tripAcceptOrReject(tripId, action);
+    Response response = await rideServiceInterface.tripAcceptOrReject(
+      tripId,
+      action,
+    );
     if (response.statusCode == 200) {
       accepting = false;
       Get.find<RiderMapController>().getPickupToDestinationPolyline();
@@ -538,10 +654,11 @@ class RideController extends GetxController implements GetxService {
                     .config
                     ?.maximumParcelRequestAcceptLimit) {
               showCustomSnackBar(
-                  isError: true,
-                  'booking_acceptance_limit_reached'.tr,
-                  subMessage: 'kindly_complete_the_delivery_of_the_ongoing'.tr,
-                  seconds: 5);
+                isError: true,
+                'booking_acceptance_limit_reached'.tr,
+                subMessage: 'kindly_complete_the_delivery_of_the_ongoing'.tr,
+                seconds: 5,
+              );
             }
           }
 
@@ -558,10 +675,11 @@ class RideController extends GetxController implements GetxService {
                       ?.parcelWeightCapacity !=
                   null)) {
             showCustomSnackBar(
-                isError: true,
-                'parcel_weight_limit_exceeded'.tr,
-                subMessage: 'parcel_weight_exceeds_the_set_limit'.tr,
-                seconds: 5);
+              isError: true,
+              'parcel_weight_limit_exceeded'.tr,
+              subMessage: 'parcel_weight_exceeds_the_set_limit'.tr,
+              seconds: 5,
+            );
           }
         });
 
@@ -617,9 +735,7 @@ class RideController extends GetxController implements GetxService {
         Get.find<RiderMapController>().setRideCurrentState(RideState.ongoing);
         getFinalFare(tripId).then((value) {
           if (value.statusCode == 200) {
-            Get.to(() => const PaymentReceivedScreen(
-                  fromParcel: true,
-                ));
+            Get.to(() => const PaymentReceivedScreen(fromParcel: true));
           }
         });
       } else {
@@ -636,8 +752,8 @@ class RideController extends GetxController implements GetxService {
 
       isPinVerificationLoading = false;
       Future.delayed(const Duration(seconds: 12)).then((value) async {
-        imageFile =
-            await Get.find<RiderMapController>().mapController!.takeSnapshot();
+        imageFile = await Get.find<RiderMapController>().mapController!
+            .takeSnapshot();
         if (imageFile != null) {
           uploadScreenShots(tripDetail!.id!, XFile.fromData(imageFile!));
         }
@@ -658,8 +774,10 @@ class RideController extends GetxController implements GetxService {
   String myDriveMode = '';
   RemainingDistanceModel? matchedMode;
   List<RemainingDistanceModel>? remainingDistanceItem = [];
-  Future<Response> remainingDistance(String tripId,
-      {bool mapBound = false}) async {
+  Future<Response> remainingDistance(
+    String tripId, {
+    bool mapBound = false,
+  }) async {
     myDriveMode =
         Get.find<ProfileController>().profileInfo!.vehicle!.category!.type!;
     isLoading = true;
@@ -667,11 +785,13 @@ class RideController extends GetxController implements GetxService {
     List<String> status = ['pending', 'accepted', 'outForPickup', 'ongoing'];
     if (response.statusCode == 200) {
       isLoading = false;
-      if (status
-          .contains(Get.find<RiderMapController>().currentRideState.name)) {
+      if (status.contains(
+        Get.find<RiderMapController>().currentRideState.name,
+      )) {
         Get.find<RiderMapController>().getDriverToPickupOrDestinationPolyline(
-            response.body[0]['encoded_polyline'],
-            mapBound: mapBound);
+          response.body[0]['encoded_polyline'],
+          mapBound: mapBound,
+        );
       }
 
       remainingDistanceItem = [];
@@ -694,6 +814,9 @@ class RideController extends GetxController implements GetxService {
         audio.play(AssetSource('notification.wav'));
       }
     } else {
+      _traceDispatch(
+        'getRideDetailBeforeAccept failed tripId=$tripId status=${response.statusCode} body=${response.body}',
+      );
       isLoading = false;
     }
     update();
@@ -703,13 +826,21 @@ class RideController extends GetxController implements GetxService {
   bool isStatusUpdating = false;
 
   Future<Response> tripStatusUpdate(
-      String status, String id, String message, String cancellationCause,
-      {String? dateTime}) async {
+    String status,
+    String id,
+    String message,
+    String cancellationCause, {
+    String? dateTime,
+  }) async {
     isLoading = true;
     isStatusUpdating = true;
     update();
     Response response = await rideServiceInterface.tripStatusUpdate(
-        status, id, cancellationCause, dateTime ?? '');
+      status,
+      id,
+      cancellationCause,
+      dateTime ?? '',
+    );
 
     if (response.statusCode == 200) {
       Get.find<TripController>().othersCancellationController.clear();
@@ -735,8 +866,11 @@ class RideController extends GetxController implements GetxService {
   PendingRideRequestModel? get getPendingRideRequestModel =>
       pendingRideRequestModel;
 
-  Future<Response> getPendingRideRequestList(int offset,
-      {int limit = 10, bool isUpdate = false}) async {
+  Future<Response> getPendingRideRequestList(
+    int offset, {
+    int limit = 10,
+    bool isUpdate = false,
+  }) async {
     isLoading = true;
     _traceDispatch(
       'getPendingRideRequestList start baseUrl=${Get.find<SplashController>().config?.baseUrl ?? 'unknown'} endpoint=pending-ride-list offset=$offset limit=$limit pusher=${Get.find<SplashController>().pusherConnectionStatus}',
@@ -744,23 +878,29 @@ class RideController extends GetxController implements GetxService {
     if (isUpdate) {
       update();
     }
-    Response response = await rideServiceInterface
-        .getPendingRideRequestList(offset, limit: limit);
+    Response response = await rideServiceInterface.getPendingRideRequestList(
+      offset,
+      limit: limit,
+    );
     if (response.statusCode == 200) {
       pendingRideRequestModel?.data = [];
       pendingRideRequestModel?.totalSize = 0;
       pendingRideRequestModel?.offset = '1';
       if (response.body['data'] != null && response.body['data'] != '') {
         if (offset == 1) {
-          pendingRideRequestModel =
-              PendingRideRequestModel.fromJson(response.body);
+          pendingRideRequestModel = PendingRideRequestModel.fromJson(
+            response.body,
+          );
         } else {
-          pendingRideRequestModel!.totalSize =
-              PendingRideRequestModel.fromJson(response.body).totalSize;
-          pendingRideRequestModel!.offset =
-              PendingRideRequestModel.fromJson(response.body).offset;
-          pendingRideRequestModel!.data!
-              .addAll(PendingRideRequestModel.fromJson(response.body).data!);
+          pendingRideRequestModel!.totalSize = PendingRideRequestModel.fromJson(
+            response.body,
+          ).totalSize;
+          pendingRideRequestModel!.offset = PendingRideRequestModel.fromJson(
+            response.body,
+          ).offset;
+          pendingRideRequestModel!.data!.addAll(
+            PendingRideRequestModel.fromJson(response.body).data!,
+          );
         }
       }
 
@@ -771,6 +911,18 @@ class RideController extends GetxController implements GetxService {
           .where((id) => id.isNotEmpty)
           .take(5)
           .toList();
+
+      if (_pendingRideDecisionTimer != null &&
+          _pendingRideDecisionTripId != null &&
+          !(pendingRideRequestModel?.data ?? <TripDetail>[]).any(
+            (trip) => trip.id == _pendingRideDecisionTripId,
+          )) {
+        _traceDispatch(
+          'pending timer cleared because trip is no longer in pending list activeTripId=$_pendingRideDecisionTripId',
+        );
+        cancelPendingRideDecisionTimer(resetToSeconds: 0);
+      }
+
       _traceDispatch(
         'getPendingRideRequestList success status=${response.statusCode} count=$count first_ids=${ids.join(',')}',
       );
@@ -861,7 +1013,8 @@ class RideController extends GetxController implements GetxService {
       showCustomSnackBar('trip_status_updated_successfully'.tr, isError: false);
       getRideDetails(tripId);
       getLiveFees(
-          tripId); // fetch gracePeriodMinutes + waitingFeePerMin immediately
+        tripId,
+      ); // fetch gracePeriodMinutes + waitingFeePerMin immediately
     }
     isPinVerificationLoading = false;
     update();
@@ -869,8 +1022,10 @@ class RideController extends GetxController implements GetxService {
   }
 
   Future<Response> arrivalDestination(String tripId, String type) async {
-    Response response =
-        await rideServiceInterface.arrivalDestination(tripId, type);
+    Response response = await rideServiceInterface.arrivalDestination(
+      tripId,
+      type,
+    );
     if (response.statusCode == 200) {
       if (kDebugMode) {
         print("===Arrived destination aria===");
@@ -883,10 +1038,14 @@ class RideController extends GetxController implements GetxService {
   }
 
   Future<Response> waitingForCustomer(
-      String tripId, String waitingStatus) async {
+    String tripId,
+    String waitingStatus,
+  ) async {
     isLoading = true;
-    Response response =
-        await rideServiceInterface.waitingForCustomer(tripId, waitingStatus);
+    Response response = await rideServiceInterface.waitingForCustomer(
+      tripId,
+      waitingStatus,
+    );
     if (response.statusCode == 200) {
       getRideDetails(tripId);
       isLoading = false;
@@ -934,13 +1093,15 @@ class RideController extends GetxController implements GetxService {
     Response response = await rideServiceInterface.getLiveFees(tripId);
     if (kDebugMode) {
       print(
-          '[getLiveFees] status=${response.statusCode} body=${response.body}');
+        '[getLiveFees] status=${response.statusCode} body=${response.body}',
+      );
     }
     if (response.statusCode == 200) {
       final data = response.body['data'];
       if (kDebugMode) {
         print(
-            '[getLiveFees] waiting_fee_per_min=${data?["waiting_fee_per_min"]} grace=${data?["grace_period_minutes"]} waiting_fee=${data?["waiting_fee"]} waiting_time=${data?["waiting_time"]}');
+          '[getLiveFees] waiting_fee_per_min=${data?["waiting_fee_per_min"]} grace=${data?["grace_period_minutes"]} waiting_fee=${data?["waiting_fee"]} waiting_time=${data?["waiting_time"]}',
+        );
       }
       if (tripDetail != null && data != null) {
         tripDetail!.waitingFee =
@@ -955,8 +1116,9 @@ class RideController extends GetxController implements GetxService {
             (data['delay_fee'] as num?)?.toDouble() ?? tripDetail!.delayFee;
         gracePeriodMinutes =
             (data['grace_period_minutes'] as num?)?.toDouble() ??
-                gracePeriodMinutes;
-        waitingFeePerMin = (data['waiting_fee_per_min'] as num?)?.toDouble() ??
+            gracePeriodMinutes;
+        waitingFeePerMin =
+            (data['waiting_fee_per_min'] as num?)?.toDouble() ??
             waitingFeePerMin;
         // Back-calculate arrivedAt if not set (e.g. after app restart)
         if (arrivedAt == null) {
@@ -972,7 +1134,8 @@ class RideController extends GetxController implements GetxService {
   }
 
   Future<void> focusOnBottomSheet(
-      GlobalKey<ExpandableBottomSheetState> key) async {
+    GlobalKey<ExpandableBottomSheetState> key,
+  ) async {
     if (key.currentState?.expansionStatus == ExpansionStatus.expanded) {
       // ignore: invalid_use_of_protected_member
       key.currentState?.reassemble();
@@ -1007,7 +1170,8 @@ class RideController extends GetxController implements GetxService {
       totalParcelCount = parcelListModel!.data!.length;
       for (int i = 0; i < parcelListModel!.data!.length; i++) {
         totalParcelWeight += double.parse(
-            parcelListModel?.data?[i].parcelInformation?.weight ?? '0');
+          parcelListModel?.data?[i].parcelInformation?.weight ?? '0',
+        );
       }
     }
   }
@@ -1054,8 +1218,9 @@ class RideController extends GetxController implements GetxService {
     if (response.statusCode == 200) {
       getRideDetails(tripId);
       isLoading = false;
-      Get.find<RiderMapController>()
-          .checkDriverReachedDestination(response.body[0]['encoded_polyline']);
+      Get.find<RiderMapController>().checkDriverReachedDestination(
+        response.body[0]['encoded_polyline'],
+      );
 
       remainingDistanceItem = [];
       response.body.forEach((distance) {
@@ -1083,8 +1248,9 @@ class RideController extends GetxController implements GetxService {
     Response response = await rideServiceInterface.startForPickup(tripId);
     if (response.statusCode == 200) {
       getRideDetails(tripDetail!.id!);
-      Get.find<RiderMapController>()
-          .setRideCurrentState(RideState.outForPickup);
+      Get.find<RiderMapController>().setRideCurrentState(
+        RideState.outForPickup,
+      );
       resetPickupWaitingState();
       _pickupWaitingTripId = tripId;
 

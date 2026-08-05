@@ -547,27 +547,63 @@ class NotificationHelper {
               userName: userName ?? data['user_name']));
     } else if (data['action'] == "new_ride_request" ||
         data['action'] == "new_parcel_request") {
+      final String tripId = data['ride_request_id'] ?? '';
+      _dispatchLog(
+          '[NOTIF_FLOW] START new_ride_request tripId=$tripId action=${data['action']} formSplash=$formSplash');
+
       Get.find<RideController>().ongoingTripList().then((value) {
+        _dispatchLog(
+            '[NOTIF_FLOW] ongoingTripList completed status=${value.statusCode} count=${(Get.find<RideController>().ongoingTrip ?? []).length}');
+
         if ((Get.find<RideController>().ongoingTrip ?? []).isEmpty) {
+          _dispatchLog(
+              '[NOTIF_FLOW] No ongoing trip, preparing pending state tripId=$tripId');
           Get.find<RiderMapController>()
               .setRideCurrentState(RideState.pending, notify: false);
+          _dispatchLog('[NOTIF_FLOW] RideState set to pending tripId=$tripId');
+
+          _dispatchLog(
+              '[NOTIF_FLOW] Calling getRideDetailBeforeAccept tripId=$tripId');
           Get.find<RideController>()
-              .getRideDetailBeforeAccept(data['ride_request_id'])
-              .then((value) {
-            if (value.statusCode == 200) {
-              Get.find<RideController>()
-                  .getPendingRideRequestList(1, limit: 100);
-              Get.find<RideController>().setRideId(data['ride_request_id']);
+              .getRideDetailBeforeAccept(tripId)
+              .then((detailResponse) {
+            _dispatchLog(
+                '[NOTIF_FLOW] getRideDetailBeforeAccept returned status=${detailResponse.statusCode} tripId=$tripId');
+
+            _dispatchLog(
+                '[NOTIF_FLOW] Calling getPendingRideRequestList tripId=$tripId');
+            Get.find<RideController>()
+                .getPendingRideRequestList(1, limit: 100)
+                .then((listResponse) {
+              _dispatchLog(
+                  '[NOTIF_FLOW] getPendingRideRequestList returned status=${listResponse.statusCode} count=${(Get.find<RideController>().pendingRideRequestModel?.data?.length ?? 0)} tripId=$tripId');
+
+              Get.find<RideController>().setRideId(tripId);
+              _dispatchLog('[NOTIF_FLOW] setRideId called tripId=$tripId');
+
               Get.find<RiderMapController>()
                   .setRideCurrentState(RideState.pending);
+              _dispatchLog(
+                  '[NOTIF_FLOW] RideState updated to pending (with notify) tripId=$tripId');
+
               Get.find<RideController>().updateRoute(false, notify: true);
+              _dispatchLog('[NOTIF_FLOW] Route updated tripId=$tripId');
+
               if (formSplash && data['type'] == "parcel") {
+                _dispatchLog('[NOTIF_FLOW] Loading parcel list tripId=$tripId');
                 Get.find<RideController>().getOngoingParcelList();
               }
+
+              _dispatchLog(
+                  '[NOTIF_FLOW] Navigating to MapScreen tripId=$tripId currentRoute=${Get.currentRoute}');
               _toRoute(formSplash, const MapScreen());
-            }
+              _dispatchLog(
+                  '[NOTIF_FLOW] Navigation command sent to MapScreen tripId=$tripId');
+            });
           });
         } else {
+          _dispatchLog(
+              '[NOTIF_FLOW] Driver has ongoing trip, showing RideRequestScreen tripId=$tripId');
           if (Get.currentRoute != '/RideRequestScreen') {
             Get.to(() => RideRequestScreen());
           } else {

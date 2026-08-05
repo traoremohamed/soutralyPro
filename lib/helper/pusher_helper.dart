@@ -196,36 +196,55 @@ class PusherHelper {
           Get.find<RideController>().startPendingRideDecisionTimer(tripId);
 
           Get.find<RideController>().ongoingTripList().then((value) {
+            _dispatchLog(
+                '[PUSHER_FLOW] ongoingTripList completed status=${value.statusCode} count=${(Get.find<RideController>().ongoingTrip ?? []).length} tripId=$tripId');
+
             if ((Get.find<RideController>().ongoingTrip ?? []).isEmpty) {
-              Get.find<RideController>().getPendingRideRequestList(1);
+              _dispatchLog(
+                  '[PUSHER_FLOW] No ongoing trip, loading pending list tripId=$tripId');
+              Get.find<RideController>()
+                  .getPendingRideRequestList(1)
+                  .then((listResp) {
+                _dispatchLog(
+                    '[PUSHER_FLOW] getPendingRideRequestList returned status=${listResp.statusCode} count=${(Get.find<RideController>().pendingRideRequestModel?.data?.length ?? 0)} tripId=$tripId');
+              });
+
               Get.find<RideController>().setRideId(tripId);
               _dispatchLog('pusher pending state prepared tripId=$tripId');
               Get.find<RiderMapController>()
                   .setRideCurrentState(RideState.pending, notify: false);
+
+              _dispatchLog(
+                  '[PUSHER_FLOW] Calling getRideDetailBeforeAccept tripId=$tripId');
               Get.find<RideController>()
                   .getRideDetailBeforeAccept(tripId)
-                  .then((value) {
-                if (value.statusCode == 200) {
-                  Get.find<RideController>().playIncomingRideAlert(
-                      incomingTrip: Get.find<RideController>().tripDetail);
-                  _dispatchLog('ride details loaded for trip_id=$tripId');
-                  _dispatchLog(
-                      'pusher will navigate to MapScreen tripId=$tripId currentRoute=${Get.currentRoute}');
+                  .then((detailResponse) {
+                _dispatchLog(
+                    '[PUSHER_FLOW] getRideDetailBeforeAccept returned status=${detailResponse.statusCode} tripId=$tripId');
+
+                // Always play alert and navigate, even if detail fetch failed.
+                // The offer may have expired/reassigned, but driver should see the interface.
+                Get.find<RideController>().playIncomingRideAlert(
+                    incomingTrip: Get.find<RideController>().tripDetail);
+                _dispatchLog(
+                    'ride details status=${detailResponse.statusCode} for trip_id=$tripId');
+                _dispatchLog(
+                    'pusher will navigate to MapScreen tripId=$tripId currentRoute=${Get.currentRoute}');
+                Get.find<RiderMapController>()
+                    .setRideCurrentState(RideState.pending);
+                Get.find<RideController>().updateRoute(false, notify: true);
+                _dispatchLog(
+                    '[PUSHER_FLOW] Navigation to MapScreen tripId=$tripId');
+                if (Get.currentRoute == '/MapScreen') {
                   Get.find<RiderMapController>()
                       .setRideCurrentState(RideState.pending);
-                  Get.find<RideController>().updateRoute(false, notify: true);
-                  if (Get.currentRoute == '/MapScreen') {
-                    Get.find<RiderMapController>()
-                        .setRideCurrentState(RideState.pending);
-                  } else {
-                    Get.to(() => const MapScreen());
-                  }
                 } else {
-                  _dispatchLog(
-                      'ride details load failed status=${value.statusCode} trip_id=$tripId');
+                  Get.to(() => const MapScreen());
                 }
               });
             } else {
+              _dispatchLog(
+                  '[PUSHER_FLOW] Driver has ongoing trip tripId=$tripId');
               if (Get.currentRoute == '/MapScreen') {
                 Get.find<RideController>()
                     .getPendingRideRequestList(1, limit: 100);

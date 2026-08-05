@@ -62,6 +62,8 @@ class TripDetail {
   String? customerAvgRating;
   String? driverAvgRating;
   String? currentStatus;
+  String? currentOfferedDriverId;
+  String? dispatchOfferExpiresAt;
   String? paidFare;
   TripStatus? tripStatus;
   ParcelInformation? parcelInformation;
@@ -138,6 +140,8 @@ class TripDetail {
       this.driverAvgRating,
       this.paidFare,
       this.currentStatus,
+      this.currentOfferedDriverId,
+      this.dispatchOfferExpiresAt,
       this.tripStatus,
       this.parcelInformation,
       this.parcelUserInfo,
@@ -284,6 +288,8 @@ class TripDetail {
     customerAvgRating = json['customer_avg_rating'] ?? '0';
     driverAvgRating = json['driver_avg_rating'];
     currentStatus = json['current_status'];
+    currentOfferedDriverId = json['current_offered_driver_id']?.toString();
+    dispatchOfferExpiresAt = json['dispatch_offer_expires_at']?.toString();
     paidFare = json['paid_fare'].toString();
     tripStatus = json['trip_status'] != null
         ? TripStatus.fromJson(json['trip_status'])

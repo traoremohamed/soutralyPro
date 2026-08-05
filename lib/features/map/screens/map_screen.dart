@@ -52,17 +52,24 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   void _findingCurrentRoute() {
     debugPrint('[MAP_DEBUG] _findingCurrentRoute() démarré');
     debugPrint(
+        '[MAP_SCREEN_INIT] MapScreen initialized fromScreen=${widget.fromScreen}');
+    debugPrint(
         '[MAP_DEBUG] currentRideState = ${Get.find<RiderMapController>().currentRideState}');
     final RideController rideController = Get.find<RideController>();
     final RiderMapController riderMapController =
         Get.find<RiderMapController>();
     final bool hasActiveTripId =
         rideController.tripDetail?.id?.isNotEmpty ?? false;
+    final bool hasPendingRideId =
+        rideController.rideId?.isNotEmpty ?? false;
 
+    // Only reset to initial if state is pending but no trip detail AND no pending ride ID.
+    // If a pending ride ID exists, we're waiting for the detail to load (may be 403/expired).
     if (riderMapController.currentRideState != RideState.initial &&
-        !hasActiveTripId) {
+        !hasActiveTripId &&
+        !hasPendingRideId) {
       debugPrint(
-          '[MAP_DEBUG] Etat non-initial sans trip actif detecte, retour a RideState.initial');
+          '[MAP_DEBUG] Etat non-initial sans trip ni pending ride detecte, retour a RideState.initial');
       riderMapController.setRideCurrentState(RideState.initial, notify: false);
     }
 
@@ -72,8 +79,10 @@ class _MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         false);
     rideController.getPendingRideRequestList(1);
     if (riderMapController.currentRideState == RideState.pending &&
-        (rideController.rideId?.isNotEmpty ?? false) &&
+        hasPendingRideId &&
         rideController.tripDetail == null) {
+      debugPrint(
+          '[MAP_DEBUG] Pending state with rideId but no tripDetail, retry detail load tripId=${rideController.rideId}');
       rideController.startPendingRideDecisionTimer(rideController.rideId!);
       rideController.getRideDetailBeforeAccept(rideController.rideId!);
     }
